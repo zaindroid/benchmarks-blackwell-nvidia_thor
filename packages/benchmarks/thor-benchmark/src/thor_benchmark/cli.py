@@ -64,6 +64,9 @@ def run(
     simulate: bool = typer.Option(
         False, "--simulate", help="Deterministic synthetic run (no GPU required)"
     ),
+    influx: bool = typer.Option(
+        False, "--influx", help="Write telemetry to InfluxDB (thor-core[timeseries])"
+    ),
     platform_config: Optional[Path] = typer.Option(
         None, "--platform-config", help="thor-config.yaml for hardware settings"
     ),
@@ -83,6 +86,15 @@ def run(
 
     runner = BenchmarkRunner(cfg)
     workload_cfg = bench_cfg.get("workload", {})
+    influx_writer = None
+    if influx:
+        try:
+            from thor_core.timeseries import TimeSeriesWriter
+
+            influx_writer = TimeSeriesWriter.from_config(cfg.database.influxdb)
+        except Exception as exc:
+            err_console.print(f"[red]Error:[/red] --influx unavailable: {exc}")
+            raise typer.Exit(1) from exc
     try:
         result = runner.run(
             model_id=model_id,
@@ -98,6 +110,7 @@ def run(
                 }.items() if v is not None
             },
             simulate=simulate,
+            influx=influx_writer,
         )
     except WorkloadError as exc:
         err_console.print(f"[red]Error:[/red] {exc}")

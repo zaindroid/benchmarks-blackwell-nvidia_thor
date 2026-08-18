@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 torch = ["torch>=2.0"]
-tensorrt = ["tensorrt>=8.6", "onnx>=1.15", "onnxruntime>=1.17"]
+tensorrt = ["tensorrt>=8.6", "onnx>=1.15", "onnxruntime>=1.17", "onnxscript>=0.1.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

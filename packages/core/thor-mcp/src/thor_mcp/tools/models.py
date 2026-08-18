@@ -41,7 +41,8 @@ SPECS: List[Dict[str, Any]] = [
             "target_throughput": {"type": "number"},
             "target_memory_mb": {"type": "number"},
             "enable_sparsity": {"type": "boolean", "default": False},
-            "execute": {"type": "boolean", "default": False, "description": "Execute the build (requires TensorRT toolchain on Thor)"},
+            "execute": {"type": "boolean", "default": False, "description": "Execute the build (TensorRT toolchain on Thor, or torch + model_path for int8 quantization)"},
+            "model_path": {"type": "string", "description": "Local path to a torch model save, required to execute int8 quantization"},
         },
         "required": ["model_id", "optimization_type"],
     },
@@ -100,6 +101,7 @@ async def models_optimize(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
             target_memory_mb=args.get("target_memory_mb"),
             enable_sparsity=args.get("enable_sparsity", False),
             execute=args.get("execute", False),
+            model_path=args.get("model_path"),
         )
     except OptimizeError as exc:
         raise ToolError(str(exc)) from exc

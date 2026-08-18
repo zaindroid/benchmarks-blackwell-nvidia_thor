@@ -188,13 +188,26 @@ device IPs, API keys and database credentials.
 7. **Run ids** — `run-<hex>` text ids; the PostgreSQL migration uses `TEXT` primary keys to match (the plan's `UUID` column would reject these ids).
 8. **Model ids** — zoo keys use full ids (`ultralytics/yolov8n`, `meta-llama/Llama-3-8B`) with short aliases (`yolov8n`, ...) resolved automatically.
 
+## Delivered in Phase 2
+
+- **Optimization execution** — real INT8 dynamic quantization (`models_optimize` with `execute=true` + `model_path`) and a TensorRT engine builder (ONNX export → engine with min/opt/max batch profiles, fp16/int8, INT8 calibrator, `.plan` serialization). Requires the TensorRT toolchain on-device for real builds.
+- **InfluxDB telemetry writer** — `thor-core[timeseries]`; `--influx` CLI flag / `write_timeseries` tool arg writes schema-compliant hardware/inference/system points.
+- **MCP streamable-HTTP transport** — `thor-mcp --http-mcp` serves the MCP endpoint at `/mcp`; `ThorMCPClient(url=..., headers=...)` connects to any remote streamable-HTTP MCP server.
+- **thor-sense** — BEV/sensor-fusion reference (camera + LiDAR encoders, BEV projection/fusion, pinhole projection, BEV IoU fusion, object tracker) in `examples/thor-sense`.
+- **thor-vlm** — on-device VLM reference (vision encoder, projector, tiny causal LM, transformers backend, safety filters) in `examples/thor-vlm`.
+- **Community leaderboard** — model submission portal (`POST/GET /api/submissions`, review flow, `submissions` table, React form).
+
+## Hosting
+
+ThorMCP is deployable as a remote streamable-HTTP MCP server on the
+[zorc](https://mcp.zaindroid.me) platform — see [docs/hosting-zorc.md](docs/hosting-zorc.md)
+for the manifest, contract endpoints (`/health`, `/ready`, `/version`) and deploy steps.
+
 ## Roadmap (staged)
 
-- [ ] Sprint 5: TensorRT engine building + quantization execution (`thor_models.optimize`)
-- [ ] Time-series writer for InfluxDB (`thor-core[timeseries]`)
-- [ ] MCP streamable-HTTP transport
-- [ ] Full thor-sense (BEV/sensor fusion) and thor-vlm reference implementations
-- [ ] Community leaderboard with model submission portal
+- [ ] Deep research implementations: full BEVFormer-style attention + depth-based inverse projection; pretrained VLM fine-tuning
+- [ ] MCP streamable-HTTP authentication layer (per-session tokens)
+- [ ] AutoML-style optimization search across precisions/batch profiles
 
 ## License
 

@@ -25,6 +25,7 @@ SPECS: List[Dict[str, Any]] = [
             "collect_memory": {"type": "boolean", "default": True},
             "collect_thermal": {"type": "boolean", "default": True},
             "custom_config": {"type": "object", "description": "Workload-specific config; set custom_config.simulate=true for a GPU-free synthetic run"},
+            "write_timeseries": {"type": "boolean", "default": False, "description": "Write telemetry to InfluxDB (configured in thor-config.yaml)"},
         },
         "required": ["model_id", "workload_type"],
     },
@@ -91,6 +92,15 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
     custom = dict(args.get("custom_config") or {})
     simulate = bool(custom.pop("simulate", False)) or os.getenv("THOR_SIMULATE") == "1"
 
+    influx_writer = None
+    if args.get("write_timeseries"):
+        try:
+            from thor_core.timeseries import TimeSeriesWriter
+
+            influx_writer = TimeSeriesWriter.from_config(ctx.config.database.influxdb)
+        except Exception as exc:
+            raise ToolError(f"write_timeseries unavailable: {exc}") from exc
+
     result = await asyncio.to_thread(
         ctx.runner.run,
         model_id=model_id,
@@ -104,6 +114,7 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
         collect_thermal=args.get("collect_thermal", True),
         custom_config=custom,
         simulate=simulate,
+        influx=influx_writer,
     )
     data = result.to_dict()
     await ctx.store.save_run(data)

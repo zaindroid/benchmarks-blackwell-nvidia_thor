@@ -42,3 +42,18 @@ export async function compareModels(modelIds: string[]) {
   const { data } = await api.post('/api/compare', { model_ids: modelIds });
   return data.comparison;
 }
+
+export interface ModelSubmission {
+  model_id: string;
+  name?: string;
+  architecture?: string;
+  parameters?: number;
+  contact_email?: string;
+  metrics?: Record<string, number | string>;
+  notes?: string;
+}
+
+export async function submitModel(submission: ModelSubmission) {
+  const { data } = await api.post('/api/submissions', submission);
+  return data;
+}

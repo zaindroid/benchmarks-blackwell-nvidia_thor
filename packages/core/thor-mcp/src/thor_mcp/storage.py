@@ -151,9 +151,14 @@ class BenchmarkStore:
         self._pg_checked = force_memory or config is None
         if not self._pg_checked:
             try:
+                import os
+
                 import asyncpg  # noqa: F401
 
-                self._pg = _PostgresBackend(config.database.postgres)  # type: ignore[union-attr]
+                # DATABASE_URL (provided by deployment platforms such as
+                # zorc) takes precedence over the config file.
+                dsn = os.getenv("DATABASE_URL") or config.database.postgres  # type: ignore[union-attr]
+                self._pg = _PostgresBackend(dsn)
             except Exception:  # pragma: no cover
                 self._pg = None
                 self._pg_checked = True

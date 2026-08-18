@@ -128,6 +128,13 @@ optional `hypothesis`, `config`, `results`, `metrics`, `tags`, `description`.
 | `/resources` | GET | Bearer |
 | `/resources/{uri}` | GET | Bearer |
 
+## Streamable-HTTP MCP transport (`--http-mcp`)
+
+Serves the standard MCP streamable-HTTP protocol at `/mcp` (JSON-RPC
+over POST + SSE responses), plus the platform endpoints
+`/health`, `/ready`, `/version`, `/openapi.json`. Any MCP client can
+connect with a URL + bearer token (see docs/hosting-zorc.md).
+
 ## Leaderboard API (website/backend)
 
 | Endpoint | Description |
@@ -136,3 +143,6 @@ optional `hypothesis`, `config`, `results`, `metrics`, `tags`, `description`.
 | `GET /api/models/{model_id}/history` | History for a model |
 | `POST /api/compare` | Compare models |
 | `GET /api/stats` | Platform statistics |
+| `POST /api/submissions` | Community model submission (pending review) |
+| `GET /api/submissions` | List submissions (`status` filter) |
+| `POST /api/submissions/{id}/review` | Approve/reject a submission |

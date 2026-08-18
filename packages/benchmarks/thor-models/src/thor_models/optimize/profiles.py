@@ -100,11 +100,16 @@ def optimize_model(
     target_memory_mb: Optional[float] = None,
     enable_sparsity: bool = False,
     execute: bool = False,
+    model_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create an optimization profile and optionally execute the build.
 
-    MVP behaviour: profiles are created and returned. When ``execute``
-    is True the TensorRT toolchain is required (Thor device).
+    ``execute=True`` behaviour:
+
+    * ``quantization`` + ``int8`` — real dynamic quantization via
+      torch; requires a local ``model_path`` to a full model save.
+    * ``tensorrt`` — requires the TensorRT toolchain (Thor device).
+    * other types (pruning/distillation) — staged.
     """
     profile = create_profile(
         model_id=model_id,
@@ -120,15 +125,58 @@ def optimize_model(
                     model_id=model_id, type=optimization_type)
         data = profile.to_dict()
         data["note"] = (
-            "Profile created. Engine building requires the TensorRT toolchain "
-            "on the Thor device (execute=True)."
+            "Profile created. Execution requires the relevant toolchain "
+            "(TensorRT on the device, torch for int8 quantization)."
         )
         return data
 
-    from thor_models.optimize.trt_builder import build_engine
+    if optimization_type == "quantization":
+        from thor_models.optimize.quantize import QuantizeError, quantize_model_file
 
+        if precision in ("fp16", "fp32"):
+            profile.status = "ready"
+            profile.performance_gain = {"estimated_speedup": 1.0, "measured": False}
+            data = profile.to_dict()
+            data["note"] = f"{precision} requires no quantization."
+            return data
+        if not model_path:
+            raise OptimizeError(
+                "executing int8 quantization requires model_path to a local "
+                "torch model save (torch.save(model))"
+            )
+        try:
+            result = quantize_model_file(
+                model_path, precision=precision, enable_sparsity=enable_sparsity
+            )
+        except QuantizeError as exc:
+            raise OptimizeError(str(exc)) from exc
+        profile.status = "ready"
+        profile.performance_gain = {
+            "compression_ratio": result.get("compression_ratio"),
+            "size_bytes_before": result.get("size_bytes_before"),
+            "size_bytes_after": result.get("size_bytes_after"),
+            "measured": False,
+        }
+        data = profile.to_dict()
+        data["quantization"] = {k: v for k, v in result.items() if k != "model"}
+        return data
+
+    from thor_models.optimize.trt_builder import OptimizeError as TRTOptimizeError
+    from thor_models.optimize.trt_builder import build_engine_from_model
+
+    if not model_path:
+        raise OptimizeError(
+            "executing tensorrt requires model_path to a torch model save"
+        )
     profile.status = "building"
-    engine = build_engine(model_id, precision, enable_sparsity=enable_sparsity)
+    try:
+        engine = build_engine_from_model(
+            model_path,
+            precision=precision,
+            enable_sparsity=enable_sparsity,
+        )
+    except TRTOptimizeError as exc:
+        raise OptimizeError(str(exc)) from exc
     profile.status = "ready"
     profile.performance_gain = {"estimated_speedup": 1.0, "measured": False}
     data = profile.to_dict()

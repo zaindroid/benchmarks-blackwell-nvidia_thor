@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional
 
@@ -100,7 +101,15 @@ class ThorMCPServer:
                  force_memory: bool = False, log_level: str = "INFO"):
         configure_logging(log_level)
         self.config = ThorConfig.load(config_path)
-        self.auth = ThorAuth(self.config.server.secret_key)
+        # Deployment: MCP_SECRET_KEY comes from the environment (zorc
+        # generates it at deploy time). Per the platform contract we
+        # fail loudly in production instead of defaulting silently.
+        secret = os.getenv("MCP_SECRET_KEY")
+        if secret is None and os.getenv("APP_ENV"):
+            raise RuntimeError(
+                "MCP_SECRET_KEY is required in production (set via environment)"
+            )
+        self.auth = ThorAuth(secret or self.config.server.secret_key)
         self.limiter = RateLimiter(self.config.rate_limit_rpm)
         self.store = BenchmarkStore(self.config, force_memory=force_memory)
         self.registry = ModelRegistry()
@@ -219,14 +228,40 @@ class ThorMCPServer:
 
         uvicorn.run(create_app(self), host=host, port=port)
 
+    def run_streamable_http(self, host: str = "0.0.0.0", port: int = 8000,
+                            allow_origins: list[str] | None = None) -> None:
+        """Serve the MCP streamable-HTTP transport (see ``thor_mcp.http_mcp``).
+
+        The MCP endpoint is at ``http://<host>:<port>/mcp`` — a standard
+        streamable-HTTP MCP server address (same protocol as remote MCP
+        servers like ``zorc``), usable from any MCP client.
+        """
+        import uvicorn
+
+        from thor_mcp.http_mcp import create_streamable_http_app
+
+        uvicorn.run(
+            create_streamable_http_app(
+                self.server,
+                allow_origins=allow_origins,
+            ),
+            host=host,
+            port=port,
+        )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Thor MCP Server")
     parser.add_argument("--config", help="Path to config file", default=None)
     parser.add_argument("--stdio", action="store_true", help="Run in stdio mode (default)")
-    parser.add_argument("--http", action="store_true", help="Run in HTTP mode (REST bridge)")
+    parser.add_argument("--http", action="store_true",
+                        help="Run in HTTP mode (REST JSON bridge)")
+    parser.add_argument("--http-mcp", action="store_true",
+                        help="Run the MCP streamable-HTTP transport (endpoint at /mcp)")
     parser.add_argument("--host", default="0.0.0.0", help="HTTP host")
     parser.add_argument("--port", type=int, default=3000, help="HTTP port")
+    parser.add_argument("--allow-origins", default=None,
+                        help="Comma-separated CORS origins for --http-mcp")
     parser.add_argument("--memory", action="store_true", help="Force in-memory storage")
     parser.add_argument("--log-level", default="INFO", help="Log level")
     args = parser.parse_args()
@@ -236,7 +271,10 @@ def main() -> None:
         force_memory=args.memory,
         log_level=args.log_level,
     )
-    if args.http:
+    if args.http_mcp:
+        origins = [o.strip() for o in args.allow_origins.split(",")] if args.allow_origins else None
+        server.run_streamable_http(host=args.host, port=args.port, allow_origins=origins)
+    elif args.http:
         server.run_http(host=args.host, port=args.port)
     else:
         asyncio.run(server.run_stdio())

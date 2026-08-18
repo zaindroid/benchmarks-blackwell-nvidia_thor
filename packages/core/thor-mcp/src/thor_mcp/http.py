@@ -30,9 +30,10 @@ def create_app(server: Any) -> FastAPI:
     async def _permission_error(request: Request, exc: PermissionError):
         return JSONResponse(status_code=401, content={"detail": str(exc)})
 
-    @app.get("/health")
-    async def health() -> Dict[str, Any]:
-        return {"status": "ok", "server": "thor-mcp"}
+    # Zorc platform contract endpoints (/health, /ready, /version).
+    from thor_mcp.deploy import platform_router
+
+    app.include_router(platform_router())
 
     @app.post("/auth/token")
     async def issue_token(request: Request) -> Dict[str, Any]:

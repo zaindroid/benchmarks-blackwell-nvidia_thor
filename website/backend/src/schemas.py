@@ -18,3 +18,21 @@ class BenchmarkQuery(BaseModel):
 class ModelComparison(BaseModel):
     model_ids: List[str]
     metrics: List[str] = ["latency_p50", "throughput", "power_watts"]
+
+
+class Submission(BaseModel):
+    """Community model submission (pending moderation)."""
+
+    model_id: str
+    name: Optional[str] = None
+    architecture: Optional[str] = None
+    parameters: Optional[int] = None
+    source: Optional[str] = "custom"
+    contact_email: Optional[str] = None
+    metrics: dict = Field(default_factory=dict)  # e.g. {"latency_p50_ms": 3.2, ...}
+    notes: Optional[str] = None
+
+
+class Review(BaseModel):
+    status: str = Field(pattern="^(approved|rejected)$")
+    comment: Optional[str] = None

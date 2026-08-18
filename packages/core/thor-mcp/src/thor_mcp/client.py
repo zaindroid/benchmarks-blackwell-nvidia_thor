@@ -1,11 +1,15 @@
 """ThorMCPClient — async MCP client used by examples and automation.
 
-Spawns the ``thor-mcp`` server over stdio and wraps the MCP session in
-a small typed API::
+Connects to a ThorMCP server either over stdio (spawns ``thor-mcp``)
+or to any remote streamable-HTTP MCP endpoint (e.g. a hosted ThorMCP
+or the user's ``zorc`` server)::
 
     async with ThorMCPClient(config_path="thor-config.yaml") as client:
         status = await client.call_tool("hardware.status", {})
-        runs = await client.read_resource("thor://benchmarks/results")
+
+    async with ThorMCPClient(url="https://mcp.zaindroid.me/mcp",
+                             headers={"Authorization": "Bearer <token>"}) as client:
+        tools = await client.list_tools()
 """
 
 from __future__ import annotations
@@ -15,26 +19,36 @@ from typing import Any, Dict, List, Optional
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 
 
 class ThorMCPClient:
-    """Programmatic MCP client for the Thor server."""
+    """Programmatic MCP client for the Thor server (stdio or remote HTTP)."""
 
     def __init__(self, command: str = "thor-mcp",
                  args: Optional[List[str]] = None,
                  config_path: Optional[str] = None,
-                 env: Optional[Dict[str, str]] = None):
-        if args is None:
+                 env: Optional[Dict[str, str]] = None,
+                 url: Optional[str] = None,
+                 headers: Optional[Dict[str, str]] = None):
+        self._url = url
+        self._headers = headers
+        if url is None and args is None:
             args = ["--stdio"]
             if config_path:
                 args = ["--config", config_path]
-        self._params = StdioServerParameters(command=command, args=args, env=env)
+        self._params = StdioServerParameters(command=command, args=args or [], env=env)
         self._client_ctx = None
         self._session: Optional[ClientSession] = None
 
     async def __aenter__(self) -> "ThorMCPClient":
-        self._client_ctx = stdio_client(self._params)
-        read, write = await self._client_ctx.__aenter__()
+        if self._url:
+            self._client_ctx = streamablehttp_client(self._url, headers=self._headers)
+        else:
+            self._client_ctx = stdio_client(self._params)
+        yielded = await self._client_ctx.__aenter__()
+        # stdio yields (read, write); streamable-http yields (read, write, session_id)
+        read, write = yielded[0], yielded[1]
         self._session = ClientSession(read, write)
         await self._session.__aenter__()
         await self._session.initialize()

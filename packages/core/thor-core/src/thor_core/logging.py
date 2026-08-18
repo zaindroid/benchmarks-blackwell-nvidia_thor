@@ -20,8 +20,19 @@ except Exception:  # pragma: no cover
 _DEFAULT_LEVEL = logging.INFO
 
 
-def configure_logging(level: int | str = _DEFAULT_LEVEL, json: bool = False) -> None:
-    """Configure global logging for the platform."""
+def configure_logging(level: int | str = _DEFAULT_LEVEL, json: bool | None = None) -> None:
+    """Configure global logging for the platform.
+
+    On deployed environments (``APP_ENV`` set) logs go to stdout as
+    JSON with the level from ``LOG_LEVEL``, matching the zorc platform
+    contract (structured JSON logs to stdout, never files).
+    """
+    import os
+
+    if json is None:
+        json = bool(os.getenv("APP_ENV"))
+    if level is _DEFAULT_LEVEL and os.getenv("LOG_LEVEL"):
+        level = os.getenv("LOG_LEVEL", "INFO")
     if isinstance(level, str):
         level = getattr(logging, level.upper(), logging.INFO)
 
@@ -35,10 +46,11 @@ def configure_logging(level: int | str = _DEFAULT_LEVEL, json: bool = False) -> 
             processors.append(structlog.processors.JSONRenderer())
         else:
             processors.append(structlog.dev.ConsoleRenderer())
+        stream = sys.stdout if os.getenv("APP_ENV") else sys.stderr
         structlog.configure(
             processors=processors,
             wrapper_class=structlog.make_filtering_bound_logger(level),
-            logger_factory=structlog.PrintLoggerFactory(sys.stderr),
+            logger_factory=structlog.PrintLoggerFactory(stream),
         )
     else:  # pragma: no cover
         logging.basicConfig(level=level, format="%(levelname)s %(name)s %(message)s")

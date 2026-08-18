@@ -9,12 +9,13 @@ the scaffold runs anywhere. Results are written by the ThorMCP server
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from models import BenchmarkQuery, ModelComparison
+from schemas import BenchmarkQuery, ModelComparison, Review, Submission
 
 router = APIRouter()
 
@@ -152,3 +153,81 @@ async def get_stats() -> Dict[str, Any]:
         return dict(row)
     finally:
         await conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Community model submissions (submission portal)
+# In-memory by default; persisted to the `submissions` table when a
+# database is reachable.
+# ---------------------------------------------------------------------------
+
+_SUBMISSIONS: Dict[str, Dict[str, Any]] = {}
+_next_submission_id = 1
+
+
+async def _persist_submission(sub: Dict[str, Any]) -> None:
+    if not _pg_available():
+        return
+    try:
+        conn = await _connect()
+        try:
+            await conn.execute(
+                """
+                INSERT INTO submissions (submission_id, model_id, name, architecture,
+                                         parameters, source, contact_email, metrics,
+                                         notes, status, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)
+                """,
+                sub["submission_id"], sub["model_id"], sub.get("name"),
+                sub.get("architecture"), sub.get("parameters"), sub.get("source"),
+                sub.get("contact_email"),
+                dict(sub.get("metrics") or {}), sub.get("notes"),
+                sub["status"], sub["created_at"],
+            )
+        finally:
+            await conn.close()
+    except Exception:
+        pass  # memory fallback is authoritative
+
+
+@router.post("/api/submissions")
+async def create_submission(payload: Submission) -> Dict[str, Any]:
+    global _next_submission_id
+    sub = {
+        "submission_id": f"sub-{_next_submission_id:04d}",
+        "model_id": payload.model_id,
+        "name": payload.name or payload.model_id,
+        "architecture": payload.architecture,
+        "parameters": payload.parameters,
+        "source": payload.source,
+        "contact_email": payload.contact_email,
+        "metrics": payload.metrics,
+        "notes": payload.notes,
+        "status": "pending",
+        "review_comment": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _next_submission_id += 1
+    _SUBMISSIONS[sub["submission_id"]] = sub
+    await _persist_submission(sub)
+    return {"status": "success", "submission": sub}
+
+
+@router.get("/api/submissions")
+async def list_submissions(status: Optional[str] = None) -> Dict[str, Any]:
+    subs = list(_SUBMISSIONS.values())
+    if status:
+        subs = [s for s in subs if s["status"] == status]
+    subs.sort(key=lambda s: s["created_at"], reverse=True)
+    return {"count": len(subs), "submissions": subs}
+
+
+@router.post("/api/submissions/{submission_id}/review")
+async def review_submission(submission_id: str, decision: Review) -> Dict[str, Any]:
+    sub = _SUBMISSIONS.get(submission_id)
+    if sub is None:
+        raise HTTPException(status_code=404, detail="submission not found")
+    sub["status"] = decision.status
+    sub["review_comment"] = decision.comment
+    await _persist_submission(sub)
+    return {"status": "success", "submission": sub}

@@ -58,8 +58,13 @@ class BenchmarkRunner:
         collect_thermal: bool = True,
         custom_config: Optional[Dict[str, Any]] = None,
         simulate: bool = False,
+        influx: Optional[Any] = None,
     ) -> BenchmarkResult:
-        """Run a benchmark and return a :class:`BenchmarkResult`."""
+        """Run a benchmark and return a :class:`BenchmarkResult`.
+
+        ``influx`` — optional :class:`thor_core.timeseries.TimeSeriesWriter`
+        used to write telemetry after the run.
+        """
         batch_sizes = batch_sizes or [1, 4, 8]
         iterations = iterations or self.config.benchmarks.default_iterations
         warmup_iterations = warmup_iterations or self.config.benchmarks.default_warmup
@@ -117,7 +122,7 @@ class BenchmarkRunner:
         hw.update(hw_stats["hardware"])
         hw["elapsed_s"] = round(total_elapsed, 2)
 
-        return BenchmarkResult(
+        result = BenchmarkResult(
             run_id=f"run-{uuid.uuid4().hex[:12]}",
             timestamp=datetime.now(timezone.utc).isoformat(),
             hardware=hw,
@@ -132,6 +137,11 @@ class BenchmarkRunner:
             results=collector.to_dict(),
             simulated=simulate,
         )
+
+        if influx is not None:
+            influx.write_run(result.to_dict())
+
+        return result
 
     def run_from_config(self, config_path: str | Path,
                         simulate: bool = False) -> BenchmarkResult:

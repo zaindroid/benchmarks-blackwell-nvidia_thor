@@ -1,0 +1,11 @@
+# zorc platform manifest for the ThorBench leaderboard API.
+# See docs/hosting-zorc.md for the workflow; this app provides the
+# public leaderboard (GET /api/leaderboard etc.) backed by Postgres.
+name: thor-leaderboard
+memory_mb: 256
+port: 8000
+domains:
+  - leaderboard.thor.zaindroid.me
+database: true
+env:
+  LEADERBOARD_SECRET: { GENERATE_ME: { generate: hex } }

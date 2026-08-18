@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Leaderboard } from './components/Leaderboard';
 import { BenchmarkChart } from './components/BenchmarkChart';
 import { ModelComparison } from './components/ModelComparison';
+import { SubmissionForm } from './components/SubmissionForm';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Leaderboard />
         <BenchmarkChart data={[]} metric="latency" title="Latency over time" />
         <ModelComparison />
+        <SubmissionForm />
       </main>
     </div>
   );
