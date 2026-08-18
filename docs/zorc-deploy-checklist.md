@@ -30,10 +30,10 @@ report = await client.call_tool("analyze_deployment_requirements", {
 report_id = report["report_id"]   # or the report will state what to fix
 ```
 
-zorc clones the repo, cross-checks `deploy/app.yaml` against the
+zorc clones the repo, cross-checks `app.yaml` against the
 actual code, and either approves or returns the specific blockers
 (e.g. memory estimate, missing endpoint, undeclared env var). Fixes
-typically land in `deploy/app.yaml` or the server entrypoint.
+typically land in `app.yaml` or the server entrypoint.
 
 ### 2. Deploy
 
@@ -68,7 +68,7 @@ curl -s https://mcp.thor.zaindroid.me/version   # {"sha": ..., "built": ...}
 
 ## Expected analyze findings (heads-up)
 
-- `database: true` in `deploy/app.yaml` → zorc provisions Postgres and
+- `database: true` in `app.yaml` → zorc provisions Postgres and
   sets `DATABASE_URL`; `BenchmarkStore` already reads it, and
   `/ready` probes it.
 - `MCP_SECRET_KEY` is declared `GENERATE_ME` → generated, and the

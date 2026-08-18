@@ -16,7 +16,7 @@ The repository is already contract-compliant:
 
 | Contract item | Where it's satisfied |
 | --- | --- |
-| `app.yaml` manifest | `deploy/app.yaml` |
+| `app.yaml` manifest | `app.yaml` |
 | `GET /health` | `thor_mcp/deploy.py` — `{"status": "ok"}`, never touches the DB |
 | `GET /ready` | `thor_mcp/deploy.py` — probes `DATABASE_URL` when set |
 | `GET /version` | `thor_mcp/deploy.py` — reads `THOR_BUILD_SHA`/`THOR_BUILD_TIME` |
@@ -37,7 +37,7 @@ The repository is already contract-compliant:
    analyze_deployment_requirements()  →  report_id
    ```
 
-   zorc clones the repo, cross-checks `deploy/app.yaml` against the
+   zorc clones the repo, cross-checks `app.yaml` against the
    code, and approves or tells you exactly what to fix.
 
 3. Deploy with the report id. `THOR_TOKEN` and `MCP_SECRET_KEY` are
