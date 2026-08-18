@@ -82,3 +82,30 @@ curl -s https://mcp.thor.zaindroid.me/version   # {"sha": ..., "built": ...}
   (now real).
 - Add the leaderboard app as a second app via `deploy/app-leaderboard.yaml`
   (same analyze → deploy flow).
+
+## Troubleshooting: `add_tunnel_route` failure (observed 2026-08-18)
+
+Deploy failed at step `add_tunnel_route`:
+
+```
+Command '['sudo', 'cp', '/home/zman/zorc/cloudflared/config.yml',
+'/etc/cloudflared/config.yml']' returned non-zero exit status 1.
+```
+
+Server-side issue on the zorc host (the repo/app manifest were fine —
+analyze was approved, `database_provisioned: true`,
+`MCP_SECRET_KEY`/`THOR_TOKEN` generated internally). The app is **not
+registered** after this failure, so retrying is safe. Fix on the zorc
+host, as the `zman` user:
+
+```bash
+ls -la /home/zman/zorc/cloudflared/config.yml      # source exists?
+sudo -n cp /home/zman/zorc/cloudflared/config.yml /etc/cloudflared/config.yml
+# "a password is required" -> grant passwordless sudo for cp:
+echo "zman ALL=(ALL) NOPASSWD: /usr/bin/cp" | sudo tee /etc/sudoers.d/zorc-cloudflared
+# /etc/cloudflared missing:
+sudo mkdir -p /etc/cloudflared && sudo chown zman /etc/cloudflared
+```
+
+Then re-run `analyze_deployment_requirements` (the report id expires
+after 60 min) and `deploy()` again.
