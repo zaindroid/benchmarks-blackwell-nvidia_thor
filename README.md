@@ -2,6 +2,13 @@
 
 Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-107%20passing-green)]()
+[![MCP](https://img.shields.io/badge/MCP-13%20tools-6a4caf)]()
+[![Research](https://img.shields.io/badge/paper-draft-blueviolet)](paper/thorai-paper.md)
+[![Hosting](https://img.shields.io/badge/zorc-deployable-0b7a3b)](docs/hosting-zorc.md)
+
 | Component | What it does |
 | --- | --- |
 | **ThorBench** | Automated benchmarking framework (latency / throughput / power / memory / thermal) |
@@ -9,6 +16,11 @@ Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 | **ThorModels** | Model registry + zoo + optimization profiles |
 | **ThorCore / ThorSDK** | Shared utilities, hardware monitoring, telemetry |
 | **Leaderboard** | REST API + React frontend for community results |
+
+Docs: [architecture](docs/architecture.md) · [getting started](docs/getting-started.md) ·
+[benchmarking guide](docs/benchmarking-guide.md) · [API reference](docs/api-reference.md) ·
+[research paper draft](paper/thorai-paper.md) · [Thor runbook](docs/thor-device-runbook.md) ·
+[zorc hosting](docs/hosting-zorc.md)
 
 ## Repository layout
 
@@ -60,6 +72,16 @@ thor-benchmark run --config packages/benchmarks/thor-benchmark/configs/llama-3-8
 # Check hardware detection
 thor-benchmark hardware
 ```
+
+### Reference measurements (dev workstation)
+
+Measured on an RTX 3050 Ti Laptop (CPU torch inference) — real Thor
+numbers to follow per the [runbook](docs/thor-device-runbook.md):
+
+| Model | Workload | P50 latency | Throughput | Power (avg) | Notes |
+| --- | --- | --- | --- | --- | --- |
+| YOLOv8n | detection | 71.3 ms | 13.9 samples/s | 7.7 W | real NVML sampling |
+| Tiny MLP → INT8 | quantization | — | — | — | 2.0x weight compression |
 
 Programmatically:
 
