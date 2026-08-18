@@ -59,11 +59,18 @@ class BenchmarkRunner:
         custom_config: Optional[Dict[str, Any]] = None,
         simulate: bool = False,
         influx: Optional[Any] = None,
+        backend: str = "auto",
     ) -> BenchmarkResult:
         """Run a benchmark and return a :class:`BenchmarkResult`.
 
         ``influx`` — optional :class:`thor_core.timeseries.TimeSeriesWriter`
         used to write telemetry after the run.
+
+        ``backend`` — ``"auto"`` (default, use a cached TensorRT engine for
+        this model+precision if one exists, else torch), ``"torch"``
+        (always torch), or ``"tensorrt"`` (require a cached engine, error
+        otherwise). Currently only the vision/detection workload acts on
+        this; other workload types ignore it and always run on torch.
         """
         batch_sizes = batch_sizes or [1, 4, 8]
         iterations = iterations or self.config.benchmarks.default_iterations
@@ -74,7 +81,11 @@ class BenchmarkRunner:
         if iterations < 1 or warmup_iterations < 0:
             raise WorkloadError("iterations must be >= 1 and warmup_iterations >= 0")
 
-        workload_cfg: Dict[str, Any] = {"simulate": simulate}
+        workload_cfg: Dict[str, Any] = {
+            "simulate": simulate,
+            "backend": backend,
+            "cache_dir": self.config.models.cache_dir,
+        }
         workload_cfg.update(custom_config or {})
         workload = create_workload(workload_type, workload_cfg)
         workload.prepare_model(model_id, precision)

@@ -192,6 +192,18 @@ def build_engine(
     }
 
 
+def default_engine_path(cache_dir: str | Path, model_id: str, precision: str) -> Path:
+    """Conventional cache location for a built engine.
+
+    Shared by the ``thor-models optimize`` CLI (default ``--output``) and
+    :class:`thor_benchmark.workloads.vision.detection.DetectionBenchmark`'s
+    engine auto-discovery, so a build lands exactly where the benchmark
+    runner will look for it without any extra wiring.
+    """
+    slug = model_id.replace("/", "_")
+    return Path(cache_dir) / "engines" / f"{slug}_{precision}.plan"
+
+
 def build_engine_from_model(
     model_path: str | Path,
     precision: str = "fp16",
@@ -199,8 +211,14 @@ def build_engine_from_model(
     batch_range: tuple[int, int, int] = DEFAULT_BATCH_RANGE,
     enable_sparsity: bool = False,
     output_dir: Optional[str | Path] = None,
+    output_path: Optional[str | Path] = None,
 ) -> Dict[str, Any]:
-    """Load a torch model save, export to ONNX and build a TRT engine."""
+    """Load a torch model save, export to ONNX and build a TRT engine.
+
+    ``output_path`` pins the final ``.plan`` location (e.g. the CLI's
+    ``--output``); ``output_dir`` only controls where the intermediate
+    ONNX file is written when ``output_path`` is not given.
+    """
     try:
         import torch
     except ImportError:
@@ -217,11 +235,14 @@ def build_engine_from_model(
     out_dir.mkdir(parents=True, exist_ok=True)
     onnx_path = out_dir / f"{Path(model_path).stem}.onnx"
     export_to_onnx(model, dummy, onnx_path)
+    if output_path is not None:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     return build_engine(
         onnx_path,
         precision=precision,
         batch_range=batch_range,
         enable_sparsity=enable_sparsity,
+        output_path=output_path,
     )
 
 

@@ -26,6 +26,7 @@ SPECS: List[Dict[str, Any]] = [
             "collect_thermal": {"type": "boolean", "default": True},
             "custom_config": {"type": "object", "description": "Workload-specific config; set custom_config.simulate=true for a GPU-free synthetic run"},
             "write_timeseries": {"type": "boolean", "default": False, "description": "Write telemetry to InfluxDB (configured in thor-config.yaml)"},
+            "backend": {"type": "string", "enum": ["auto", "torch", "tensorrt"], "default": "auto", "description": "auto uses a cached TensorRT engine if one exists (vision/detection only), tensorrt requires one"},
         },
         "required": ["model_id", "workload_type"],
     },
@@ -127,6 +128,7 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
         custom_config=custom,
         simulate=simulate,
         influx=influx_writer,
+        backend=args.get("backend", "auto"),
     )
     data = result.to_dict()
     await ctx.store.save_run(data)

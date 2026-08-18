@@ -9,6 +9,7 @@ from typing import Optional
 import typer
 import yaml
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from thor_core.config import ThorConfig
@@ -64,6 +65,11 @@ def run(
     simulate: bool = typer.Option(
         False, "--simulate", help="Deterministic synthetic run (no GPU required)"
     ),
+    backend: str = typer.Option(
+        "auto", "--backend",
+        help="auto (use a cached TensorRT engine if one exists), torch, or tensorrt "
+             "(require a cached engine; build one first with `thor-models optimize`)",
+    ),
     influx: bool = typer.Option(
         False, "--influx", help="Write telemetry to InfluxDB (thor-core[timeseries])"
     ),
@@ -93,7 +99,7 @@ def run(
 
             influx_writer = TimeSeriesWriter.from_config(cfg.database.influxdb)
         except Exception as exc:
-            err_console.print(f"[red]Error:[/red] --influx unavailable: {exc}")
+            err_console.print(f"[red]Error:[/red] --influx unavailable: {escape(str(exc))}")
             raise typer.Exit(1) from exc
     try:
         result = runner.run(
@@ -111,9 +117,10 @@ def run(
             },
             simulate=simulate,
             influx=influx_writer,
+            backend=backend,
         )
     except WorkloadError as exc:
-        err_console.print(f"[red]Error:[/red] {exc}")
+        err_console.print(f"[red]Error:[/red] {escape(str(exc))}")
         raise typer.Exit(1) from exc
 
     data = result.to_dict()

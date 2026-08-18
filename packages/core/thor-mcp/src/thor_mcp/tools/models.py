@@ -43,6 +43,7 @@ SPECS: List[Dict[str, Any]] = [
             "enable_sparsity": {"type": "boolean", "default": False},
             "execute": {"type": "boolean", "default": False, "description": "Execute the build (TensorRT toolchain on Thor, or torch + model_path for int8 quantization)"},
             "model_path": {"type": "string", "description": "Local path to a torch model save, required to execute int8 quantization"},
+            "output_path": {"type": "string", "description": "Engine .plan output path (tensorrt execute); defaults to the shared engine cache so benchmark_run --backend tensorrt can auto-discover it"},
         },
         "required": ["model_id", "optimization_type"],
     },
@@ -102,6 +103,8 @@ async def models_optimize(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
             enable_sparsity=args.get("enable_sparsity", False),
             execute=args.get("execute", False),
             model_path=args.get("model_path"),
+            output_path=args.get("output_path"),
+            cache_dir=ctx.config.models.cache_dir,
         )
     except OptimizeError as exc:
         raise ToolError(str(exc)) from exc

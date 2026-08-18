@@ -34,7 +34,8 @@ class Workload(ABC):
         self.precision: str = "fp16"
         self.simulate = bool(self.config.get("simulate", False))
         self._sim_base_ms = float(self.config.get("simulated_latency_ms", 8.0))
-        self._engine: Any = None  # reserved for TensorRT engines (Sprint 5+)
+        self._engine: Any = None  # set to a TensorRT execution context when active
+        self.backend: str = "torch"
 
     # -- interface ------------------------------------------------------
     @abstractmethod
@@ -96,6 +97,7 @@ class Workload(ABC):
             "precision": self.precision,
             "input_shape": spec.get("input_size"),
             "task": spec.get("task", self.TASK),
+            "backend": self.backend,
         }
 
     def resolve_model_id(self, model_id: str) -> str:

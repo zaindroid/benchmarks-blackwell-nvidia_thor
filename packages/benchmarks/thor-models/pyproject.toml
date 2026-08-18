@@ -10,11 +10,17 @@ requires-python = ">=3.10"
 dependencies = [
     "thor-core>=0.1.0",
     "pyyaml>=6.0",
+    "typer>=0.9",
+    "rich>=13.0",
 ]
 
 [project.optional-dependencies]
 torch = ["torch>=2.0"]
 tensorrt = ["tensorrt>=8.6", "onnx>=1.15", "onnxruntime>=1.17", "onnxscript>=0.1.0"]
+zoo = ["ultralytics>=8.0"]
+
+[project.scripts]
+thor-models = "thor_models.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -101,6 +101,8 @@ def optimize_model(
     enable_sparsity: bool = False,
     execute: bool = False,
     model_path: Optional[str] = None,
+    output_path: Optional[str] = None,
+    cache_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create an optimization profile and optionally execute the build.
 
@@ -162,18 +164,22 @@ def optimize_model(
         return data
 
     from thor_models.optimize.trt_builder import OptimizeError as TRTOptimizeError
-    from thor_models.optimize.trt_builder import build_engine_from_model
+    from thor_models.optimize.trt_builder import build_engine_from_model, default_engine_path
 
     if not model_path:
         raise OptimizeError(
             "executing tensorrt requires model_path to a torch model save"
         )
+    resolved_output = output_path or (
+        default_engine_path(cache_dir, model_id, precision) if cache_dir else None
+    )
     profile.status = "building"
     try:
         engine = build_engine_from_model(
             model_path,
             precision=precision,
             enable_sparsity=enable_sparsity,
+            output_path=resolved_output,
         )
     except TRTOptimizeError as exc:
         raise OptimizeError(str(exc)) from exc

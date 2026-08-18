@@ -16,6 +16,7 @@ from thor_models.optimize.trt_builder import (
     Int8Calibrator,
     build_engine,
     build_engine_from_model,
+    default_engine_path,
     export_to_onnx,
 )
 
@@ -188,9 +189,47 @@ def test_build_engine_from_model_end_to_end(fake_trt, tmp_path):
     assert (tmp_path / "tiny.plan").exists()
 
 
+def test_default_engine_path_convention(tmp_path):
+    path = default_engine_path(tmp_path, "ultralytics/yolov8n", "fp16")
+    assert path == tmp_path / "engines" / "ultralytics_yolov8n_fp16.plan"
+
+
+def test_build_engine_from_model_explicit_output_path(fake_trt, tmp_path):
+    import torch
+
+    model = _tiny_model().eval()
+    model_path = tmp_path / "tiny.pt"
+    torch.save(model, model_path)
+    engine_path = tmp_path / "custom" / "engine.plan"
+    result = build_engine_from_model(
+        model_path, precision="fp16", input_shape=[1, 3, 32, 32],
+        output_path=engine_path,
+    )
+    assert result["engine_path"] == str(engine_path)
+    assert engine_path.exists()
+
+
 def test_optimize_model_tensorrt_requires_model_path():
     with pytest.raises(OptimizeError):
         optimize_model("test/tiny", "tensorrt", precision="fp16", execute=True)
+
+
+def test_optimize_model_tensorrt_execute_uses_cache_dir_convention(fake_trt, tmp_path):
+    import torch
+
+    # optimize_model() has no input_shape passthrough; it always builds
+    # against build_engine_from_model's 640x640 default.
+    model = _tiny_model(size=640).eval()
+    model_path = tmp_path / "tiny.pt"
+    torch.save(model, model_path)
+
+    result = optimize_model(
+        "ultralytics/yolov8n", "tensorrt", precision="fp16", execute=True,
+        model_path=str(model_path), cache_dir=str(tmp_path),
+    )
+    expected = default_engine_path(tmp_path, "ultralytics/yolov8n", "fp16")
+    assert result["engine"]["engine_path"] == str(expected)
+    assert expected.exists()
 
 
 def test_trt_missing_raises(tmp_path):
