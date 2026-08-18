@@ -8,4 +8,4 @@ domains:
   - leaderboard.thor.zaindroid.me
 database: true
 env:
-  LEADERBOARD_SECRET: { GENERATE_ME: { generate: hex } }
+  LEADERBOARD_SECRET: { generate: hex }
