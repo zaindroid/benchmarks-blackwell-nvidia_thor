@@ -1,0 +1,10 @@
+# LiDAR sensor configuration (thor-sense reference implementation)
+lidar:
+  channels: 128
+  range_m: 200
+  points_per_second: 2400000
+  field_of_view_degrees: 360
+  frame_rate_hz: 10
+
+calibration:
+  extrinsic: "sensor-fusion-config"

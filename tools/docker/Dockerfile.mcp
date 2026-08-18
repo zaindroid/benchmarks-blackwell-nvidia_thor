@@ -1,0 +1,13 @@
+# MCP server image.
+FROM thor-ai-platform/base:latest
+
+# Install MCP server
+COPY packages/core/thor-mcp /tmp/thor-mcp
+RUN pip install /tmp/thor-mcp
+
+# Copy config
+COPY thor-config.yaml /workspace/thor-config.yaml
+
+EXPOSE 3000
+
+ENTRYPOINT ["thor-mcp", "--http", "--port", "3000"]

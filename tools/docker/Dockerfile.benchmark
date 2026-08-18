@@ -1,0 +1,14 @@
+# Benchmark worker image.
+FROM thor-ai-platform/base:latest
+
+# Install benchmark packages
+COPY packages/benchmarks/thor-benchmark /tmp/thor-benchmark
+RUN pip install /tmp/thor-benchmark
+
+COPY packages/benchmarks/thor-models /tmp/thor-models
+RUN pip install /tmp/thor-models
+
+# Copy benchmark configs
+COPY packages/benchmarks/thor-benchmark/configs /workspace/configs
+
+ENTRYPOINT ["thor-benchmark"]

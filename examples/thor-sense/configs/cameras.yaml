@@ -1,0 +1,21 @@
+# Camera sensor configuration (thor-sense reference implementation)
+cameras:
+  - id: "front_center"
+    resolution: [1920, 1080]
+    fov_degrees: 120
+    focal_length_mm: 4.0
+    frame_rate_hz: 30
+  - id: "front_left"
+    resolution: [1920, 1080]
+    fov_degrees: 100
+    focal_length_mm: 4.0
+    frame_rate_hz: 30
+  - id: "front_right"
+    resolution: [1920, 1080]
+    fov_degrees: 100
+    focal_length_mm: 4.0
+    frame_rate_hz: 30
+
+synchronization:
+  master_clock: "camera"
+  max_skew_ms: 5

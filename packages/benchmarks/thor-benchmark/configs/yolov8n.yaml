@@ -1,0 +1,24 @@
+# YOLOv8-nano object detection benchmark config
+model:
+  id: "ultralytics/yolov8n"
+  architecture: "cnn"
+  parameters: 3150000
+  source: "ultralytics"
+  input_size: [640, 640]
+  num_classes: 80
+
+workload:
+  type: "vision"
+  task: "detection"
+  batch_sizes: [1, 4, 8, 16, 32]
+  dataset: "coco"
+  num_iterations: 100
+
+optimization:
+  tensorrt: true
+  quantization: "fp16"
+  use_dla: false
+
+metrics:
+  collect: ["latency", "throughput", "power", "memory"]
+  output_formats: ["json", "csv"]

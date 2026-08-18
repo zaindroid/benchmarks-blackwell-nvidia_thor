@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thor-mcp"
+version = "0.1.0"
+description = "MCP server for NVIDIA Thor benchmarking and model management"
+requires-python = ">=3.10"
+dependencies = [
+    "thor-core>=0.1.0",
+    "thor-benchmark>=0.1.0",
+    "thor-models>=0.1.0",
+    "thor-sdk>=0.1.0",
+    # mcp 1.x low-level Server API (@server.list_tools / call_tool decorators).
+    # mcp 2.x switched to a new request-handler paradigm; pinned for the MVP.
+    "mcp>=1.0.0,<2.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
+
+[project.optional-dependencies]
+# PostgreSQL-backed storage (falls back to in-memory without it)
+postgres = ["asyncpg>=0.29"]
+
+[project.scripts]
+thor-mcp = "thor_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

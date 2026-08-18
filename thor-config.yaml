@@ -1,0 +1,54 @@
+# ThorAI Platform — local configuration.
+# Values here are dev defaults; edit for your Thor device.
+
+server:
+  host: "0.0.0.0"
+  port: 3000
+  mode: "http"
+  secret_key: "dev-secret-change-me"
+  rate_limit:
+    enabled: true
+    requests_per_minute: 10
+
+hardware:
+  device: "NVIDIA DRIVE Thor"
+  device_ip: "192.168.1.100"
+  sdk_path: "/opt/nvidia/thor"
+  cuda_device: 0
+
+database:
+  postgres:
+    host: "localhost"
+    port: 5432
+    user: "thor"
+    password: "thor"
+    database: "thorbench"
+  influxdb:
+    url: "http://localhost:8086"
+    token: "your-influxdb-token"
+    org: "thor-org"
+    bucket: "thor-bucket"
+  redis:
+    url: "redis://localhost:6379"
+
+benchmarks:
+  default_iterations: 100
+  default_warmup: 10
+  timeout_seconds: 3600
+  collect_power: true
+  collect_memory: true
+  collect_thermal: true
+
+models:
+  registry_path: "/data/models"
+  cache_dir: "/data/cache"
+  default_precision: "fp16"
+
+experiments:
+  wandb:
+    enabled: false
+    project: "thor-ai"
+    entity: "your-entity"
+  mlflow:
+    enabled: false
+    tracking_uri: "http://localhost:5000"

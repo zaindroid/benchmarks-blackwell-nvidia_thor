@@ -1,0 +1,29 @@
+# Llama-3-8B LLM benchmark config
+model:
+  id: "meta-llama/Llama-3-8B"
+  architecture: "transformer"
+  parameters: 8000000000
+  source: "huggingface"
+  max_sequence_length: 8192
+  hidden_size: 4096
+  num_layers: 32
+
+workload:
+  type: "language"
+  benchmark_types: ["prefill", "decode", "end_to_end"]
+  batch_sizes: [1, 4, 8]
+  sequence_lengths: [128, 512, 1024, 2048]
+  max_new_tokens: 256
+  prompts: ["The quick brown fox", "In the beginning", "Once upon a time"]
+
+optimization:
+  tensorrt: true
+  quantization: "int4"
+  use_fp8: false
+  enable_sparsity: true
+  use_inflight_batching: true
+
+metrics:
+  collect: ["latency", "throughput", "power", "memory", "thermal"]
+  output_formats: ["json", "csv", "parquet"]
+  track_wandb: true

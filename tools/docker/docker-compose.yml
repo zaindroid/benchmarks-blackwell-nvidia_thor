@@ -1,0 +1,100 @@
+# ThorAI Platform full stack.
+# Usage: docker compose -f tools/docker/docker-compose.yml up -d
+
+services:
+  thor-core:
+    build:
+      context: ../..
+      dockerfile: tools/docker/Dockerfile.base
+    volumes:
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /opt/nvidia/thor:/opt/nvidia/thor
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+    privileged: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  benchmark-worker:
+    build:
+      context: ../..
+      dockerfile: tools/docker/Dockerfile.benchmark
+    depends_on:
+      - thor-core
+      - redis
+    environment:
+      - THOR_MCP_SERVER=thor-core:3000
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://thor:thor@postgres:5432/thorbench
+    volumes:
+      - benchmark_results:/results
+
+  mcp-server:
+    build:
+      context: ../..
+      dockerfile: tools/docker/Dockerfile.mcp
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - influxdb
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://thor:thor@postgres:5432/thorbench
+      - INFLUXDB_URL=http://influxdb:8086
+      - REDIS_URL=redis://redis:6379
+      - THOR_DEVICE_IP=thor-core
+      - SECRET_KEY=your-secret-key-here
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: thor
+      POSTGRES_PASSWORD: thor
+      POSTGRES_DB: thorbench
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../website/database/migrations:/docker-entrypoint-initdb.d:ro
+
+  influxdb:
+    image: influxdb:2.7
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=thor
+      - DOCKER_INFLUXDB_INIT_PASSWORD=thorpassword
+      - DOCKER_INFLUXDB_INIT_ORG=thor-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=thor-bucket
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  frontend:
+    build:
+      context: ../../website/frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - mcp-server
+
+volumes:
+  postgres_data:
+  influxdb_data:
+  benchmark_results:

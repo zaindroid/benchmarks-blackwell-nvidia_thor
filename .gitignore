@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.whl
+
+# Environment & secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Data / results
+results/
+*.jsonl
+data/
+models/
+*.log
+
+# Node
+node_modules/
+website/frontend/dist/
+website/frontend/build/
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+
+# Generated
+leaderboard.json

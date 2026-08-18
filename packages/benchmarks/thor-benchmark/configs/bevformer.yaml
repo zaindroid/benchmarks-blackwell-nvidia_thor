@@ -1,0 +1,26 @@
+# BEVFormer-style BEV perception benchmark config
+# Reference implementation: examples/thor-sense
+model:
+  id: "nvidia/segformer-b0-finetuned-ade-512-512"
+  architecture: "transformer"
+  parameters: 3700000
+  source: "huggingface"
+  input_size: [512, 512]
+  num_classes: 150
+
+workload:
+  type: "segmentation"
+  task: "bev-perception"
+  batch_sizes: [1, 4, 8]
+  cameras: 6
+  lidar_channels: 5
+  num_iterations: 100
+
+optimization:
+  tensorrt: true
+  quantization: "fp16"
+  use_dla: false
+
+metrics:
+  collect: ["latency", "throughput", "power", "memory"]
+  output_formats: ["json", "csv"]

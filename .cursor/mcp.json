@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "thor": {
+      "command": "thor-mcp",
+      "args": ["--config", "/path/to/thor-config.yaml"],
+      "env": {
+        "THOR_DEVICE_IP": "192.168.1.100",
+        "THOR_API_KEY": "your-api-key",
+        "CUDA_VISIBLE_DEVICES": "0"
+      }
+    }
+  }
+}

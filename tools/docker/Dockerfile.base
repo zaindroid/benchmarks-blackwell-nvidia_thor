@@ -1,0 +1,26 @@
+# Base image: CUDA dev environment with ThorAI core packages.
+FROM nvcr.io/nvidia/cuda:12.0.0-devel-ubuntu22.04
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    git \
+    curl \
+    wget \
+    vim \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install core packages
+COPY packages/core/thor-core /tmp/thor-core
+RUN pip install /tmp/thor-core
+
+COPY packages/core/thor-sdk /tmp/thor-sdk
+RUN pip install /tmp/thor-sdk
+
+# Install NVIDIA libraries (adjust index URL for your CUDA version)
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+RUN pip install tensorrt
+
+WORKDIR /workspace

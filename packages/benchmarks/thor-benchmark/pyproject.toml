@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thor-benchmark"
+version = "0.1.0"
+description = "Benchmark orchestrator and workloads for NVIDIA Thor"
+requires-python = ">=3.10"
+dependencies = [
+    "thor-core>=0.1.0",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "typer>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0"]
+tensorrt = ["tensorrt>=8.6"]
+vision = ["ultralytics>=8.0", "transformers>=4.40"]
+language = ["transformers>=4.40", "sentencepiece>=0.2"]
+multimodal = ["transformers>=4.40", "accelerate>=0.30"]
+
+[project.scripts]
+thor-benchmark = "thor_benchmark.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

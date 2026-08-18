@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thor-sdk"
+version = "0.1.0"
+description = "Device communication, power monitoring and telemetry for NVIDIA Thor"
+requires-python = ">=3.10"
+dependencies = [
+    "thor-core>=0.1.0",
+    "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+# Remote device communication over SSH (not needed for local device)
+ssh = ["paramiko>=3.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

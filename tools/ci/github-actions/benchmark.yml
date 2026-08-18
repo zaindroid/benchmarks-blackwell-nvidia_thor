@@ -1,0 +1,64 @@
+name: Run Thor Benchmarks
+
+# NOTE: GitHub Actions expects workflows under .github/workflows/.
+# Copy this file there, or use it as a reference for your own CI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/benchmarks/**'
+      - 'packages/core/**'
+  schedule:
+    - cron: '0 0 * * *'  # daily benchmarks at midnight
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: 'Model to benchmark'
+        required: false
+      workload_type:
+        description: 'Type of workload'
+        required: false
+        default: 'language'
+
+jobs:
+  benchmark:
+    runs-on: [self-hosted, linux, thor-device]
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup environment
+        run: |
+          docker compose -f tools/docker/docker-compose.yml up -d postgres influxdb redis
+          sleep 10
+
+      - name: Check hardware status
+        run: |
+          thor-benchmark hardware
+
+      - name: Run benchmark
+        run: |
+          mkdir -p results
+          if [ -z "${{ github.event.inputs.model_id }}" ]; then
+            thor-benchmark run --config packages/benchmarks/thor-benchmark/configs/llama-3-8b.yaml \
+              --output results.json --report benchmark-report.md || true
+          else
+            thor-benchmark run \
+              --model "${{ github.event.inputs.model_id }}" \
+              --workload "${{ github.event.inputs.workload_type }}" \
+              --output results.json --report benchmark-report.md
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            results.json
+            benchmark-report.md
+
+      - name: Update leaderboard
+        run: |
+          python tools/scripts/update_leaderboard.py results.json

@@ -1,0 +1,17 @@
+# Sensor fusion configuration (thor-sense reference implementation)
+fusion:
+  strategy: "late_fusion"   # early | late | deep
+  bev_grid:
+    x_m: [-50, 50]
+    y_m: [-25, 25]
+    resolution_m: 0.25
+  inputs:
+    - camera
+    - lidar
+  outputs:
+    - "3d_detections"
+    - "bev_occupancy"
+
+benchmark:
+  workload_type: "segmentation"
+  config: "../../packages/benchmarks/thor-benchmark/configs/bevformer.yaml"

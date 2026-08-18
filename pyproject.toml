@@ -1,0 +1,23 @@
+# Root project file for ThorAI Platform.
+# Provides shared dev tooling config; each package manages its own dependencies.
+[project]
+name = "thor-ai-platform"
+version = "0.1.0"
+description = "Open-source benchmarking and deployment platform for NVIDIA DRIVE Thor"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+asyncio_mode = "auto"
+# Monorepo: unique test module names + importlib mode avoids collisions
+# between packages that share test basenames (e.g. test_metrics).
+addopts = "--import-mode=importlib"
+filterwarnings = ["ignore::DeprecationWarning"]
