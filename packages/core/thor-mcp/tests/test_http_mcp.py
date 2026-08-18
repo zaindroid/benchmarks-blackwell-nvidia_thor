@@ -35,7 +35,7 @@ def http_server():
 async def test_streamable_http_end_to_end(http_server):
     async with ThorMCPClient(url=http_server) as client:
         tools = await client.list_tools()
-        assert len(tools) == 13
+        assert len(tools) == 14
 
         status = await client.call_tool("hardware_status", {})
         assert status["status"] == "ok"

@@ -32,6 +32,7 @@ class _MemoryBackend:
         self._runs: Dict[str, Dict[str, Any]] = {}
         self._datasets: Dict[str, Dict[str, Any]] = {}
         self._reports: Dict[str, Dict[str, Any]] = {}
+        self._experiments: Dict[str, Dict[str, Any]] = {}
 
     async def save_run(self, run: Dict[str, Any]) -> str:
         self._runs[run["run_id"]] = run
@@ -42,14 +43,17 @@ class _MemoryBackend:
 
     async def list_runs(self, model_id: Optional[str] = None,
                         workload_type: Optional[str] = None,
-                        limit: int = 100) -> List[Dict[str, Any]]:
+                        limit: int = 100, since: Optional[str] = None,
+                        offset: int = 0) -> List[Dict[str, Any]]:
         runs = list(self._runs.values())
         if model_id:
             runs = [r for r in runs if r.get("model", {}).get("name") == model_id]
         if workload_type:
             runs = [r for r in runs if r.get("workload", {}).get("type") == workload_type]
+        if since:
+            runs = [r for r in runs if r.get("timestamp", "") >= since]
         runs.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
-        return runs[:limit]
+        return runs[offset:offset + limit]
 
     async def register_dataset(self, dataset_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         entry = {"dataset_id": dataset_id, "created_at": _now(), **metadata}
@@ -68,25 +72,52 @@ class _MemoryBackend:
     async def get_report(self, report_id: str) -> Optional[Dict[str, Any]]:
         return self._reports.get(report_id)
 
+    async def save_experiment(self, experiment_id: str, config: Dict[str, Any],
+                              results: Dict[str, Any],
+                              name: Optional[str] = None,
+                              status: str = "completed") -> str:
+        entry = self._experiments.get(experiment_id, {
+            "experiment_id": experiment_id,
+            "created_at": _now(),
+        })
+        entry.update({
+            "name": name or entry.get("name") or experiment_id,
+            "config": config,
+            "results": results,
+            "status": status,
+            "updated_at": _now(),
+        })
+        self._experiments[experiment_id] = entry
+        return experiment_id
+
+    async def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        return self._experiments.get(experiment_id)
+
 
 class _PostgresBackend:
-    """PostgreSQL-backed storage for benchmark runs (asyncpg)."""
+    """PostgreSQL-backed storage for benchmark runs (asyncpg, pooled)."""
 
     def __init__(self, config: Any):
         from thor_core.config import PostgresConfig
 
-        self._pg: Any = None
+        self._pool: Any = None
         self._dsn = config.dsn if isinstance(config, PostgresConfig) else str(config)
 
     async def connect(self) -> None:
         import asyncpg
 
-        self._pg = await asyncpg.connect(self._dsn, timeout=3, command_timeout=5)
+        self._pool = await asyncpg.create_pool(
+            self._dsn, min_size=1, max_size=5, timeout=3, command_timeout=5,
+        )
 
     async def close(self) -> None:
-        if self._pg is not None:
-            await self._pg.close()
-            self._pg = None
+        if self._pool is not None:
+            await self._pool.close()
+            self._pool = None
+
+    @property
+    def _pg(self) -> Any:
+        return self._pool
 
     async def save_run(self, run: Dict[str, Any]) -> str:
         await self._pg.execute(
@@ -112,7 +143,8 @@ class _PostgresBackend:
 
     async def list_runs(self, model_id: Optional[str] = None,
                         workload_type: Optional[str] = None,
-                        limit: int = 100) -> List[Dict[str, Any]]:
+                        limit: int = 100, since: Optional[str] = None,
+                        offset: int = 0) -> List[Dict[str, Any]]:
         conditions, params = [], []
         if model_id:
             params.append(model_id)
@@ -120,10 +152,17 @@ class _PostgresBackend:
         if workload_type:
             params.append(workload_type)
             conditions.append(f"workload_info->>'type' = ${len(params)}")
+        if since:
+            params.append(datetime.fromisoformat(since))
+            conditions.append(f"timestamp >= ${len(params)}")
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.append(limit)
+        limit_idx = len(params)
+        params.append(offset)
+        offset_idx = len(params)
         rows = await self._pg.fetch(
-            f"SELECT * FROM benchmark_runs {where} ORDER BY timestamp DESC LIMIT ${len(params)}",
+            f"SELECT * FROM benchmark_runs {where} ORDER BY timestamp DESC "
+            f"LIMIT ${limit_idx} OFFSET ${offset_idx}",
             *params,
         )
         return [self._row_to_run(r) for r in rows]
@@ -138,6 +177,44 @@ class _PostgresBackend:
             "workload": row["workload_info"],
             "results": row["results"],
             "git_commit": row["git_commit"],
+        }
+
+    async def save_experiment(self, experiment_id: str, config: Dict[str, Any],
+                              results: Dict[str, Any],
+                              name: Optional[str] = None,
+                              status: str = "completed") -> str:
+        await self._pg.execute(
+            """
+            INSERT INTO experiments (experiment_id, name, config, results, status)
+            VALUES ($1, $2, $3::jsonb, $4::jsonb, $5)
+            ON CONFLICT (experiment_id) DO UPDATE SET
+                config = EXCLUDED.config,
+                results = EXCLUDED.results,
+                status = EXCLUDED.status,
+                updated_at = NOW()
+            """,
+            experiment_id,
+            name or experiment_id,
+            json.dumps(config),
+            json.dumps(results),
+            status,
+        )
+        return experiment_id
+
+    async def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        row = await self._pg.fetchrow(
+            "SELECT * FROM experiments WHERE experiment_id = $1", experiment_id
+        )
+        if row is None:
+            return None
+        return {
+            "experiment_id": row["experiment_id"],
+            "name": row["name"],
+            "config": row["config"],
+            "results": row["results"],
+            "status": row["status"],
+            "created_at": row["created_at"].isoformat(),
+            "updated_at": row["updated_at"].isoformat(),
         }
 
 
@@ -194,8 +271,10 @@ class BenchmarkStore:
 
     async def list_runs(self, model_id: Optional[str] = None,
                         workload_type: Optional[str] = None,
-                        limit: int = 100) -> List[Dict[str, Any]]:
-        return await self._call("list_runs", model_id, workload_type, limit)
+                        limit: int = 100, since: Optional[str] = None,
+                        offset: int = 0) -> List[Dict[str, Any]]:
+        return await self._call("list_runs", model_id, workload_type, limit,
+                                since=since, offset=offset)
 
     async def register_dataset(self, dataset_id: str,
                                metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -209,3 +288,17 @@ class BenchmarkStore:
 
     async def get_report(self, report_id: str) -> Optional[Dict[str, Any]]:
         return await self._call("get_report", report_id)
+
+    async def save_experiment(self, experiment_id: str, config: Dict[str, Any],
+                              results: Dict[str, Any],
+                              name: Optional[str] = None,
+                              status: str = "completed") -> str:
+        return await self._call("save_experiment", experiment_id, config, results,
+                                name=name, status=status)
+
+    async def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        return await self._call("get_experiment", experiment_id)
+
+    async def is_persisted(self) -> bool:
+        """Whether the active backend is PostgreSQL (vs. in-memory fallback)."""
+        return isinstance(await self._backend(), _PostgresBackend)

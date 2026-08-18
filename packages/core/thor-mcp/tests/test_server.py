@@ -35,6 +35,25 @@ async def test_benchmark_run_simulated(server):
     assert data["status"] == "success"
     assert data["run_id"].startswith("run-")
     assert "latency" in data["results"]
+    assert data["persisted"] is False  # server() fixture forces in-memory storage
+
+
+async def test_benchmark_history(server):
+    await server.invoke("benchmark_run", {
+        "model_id": "ultralytics/yolov8n", "workload_type": "vision",
+        "batch_sizes": [1], "iterations": 3,
+        "custom_config": {"simulate": True},
+    })
+    result = await server.invoke("benchmark_history", {
+        "model_id": "ultralytics/yolov8n", "days": 7, "limit": 10,
+    })
+    assert result.isError is False, result.content[0].text
+    data = json.loads(result.content[0].text)
+    assert data["count"] == 1
+    assert data["runs"][0]["model"] == "ultralytics/yolov8n"
+
+    stale = await server.invoke("benchmark_history", {"days": 0})
+    assert json.loads(stale.content[0].text)["count"] == 0
 
 
 async def test_benchmark_compare(server):

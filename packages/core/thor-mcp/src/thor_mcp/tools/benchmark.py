@@ -55,6 +55,18 @@ SPECS: List[Dict[str, Any]] = [
         },
         "required": [],
     },
+    {
+        "name": "benchmark_history",
+        "description": "Query historical benchmark results over a trailing time window, paginated",
+        "properties": {
+            "model_id": {"type": "string"},
+            "workload_type": {"type": "string"},
+            "days": {"type": "integer", "default": 30, "description": "Trailing window in days"},
+            "limit": {"type": "integer", "default": 50},
+            "offset": {"type": "integer", "default": 0},
+        },
+        "required": [],
+    },
 ]
 
 HANDLERS: Dict[str, Any] = {}
@@ -118,6 +130,7 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
     )
     data = result.to_dict()
     await ctx.store.save_run(data)
+    persisted = await ctx.store.is_persisted()
 
     results_ = data.get("results", {})
     ctx.registry.update_best_metrics(model_id, {
@@ -126,7 +139,7 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
         "power_watts": results_.get("power", {}).get("average_watts"),
         "memory_peak_mb": results_.get("memory", {}).get("peak_mb"),
     })
-    return {"status": "success", "run_id": data["run_id"], **data}
+    return {"status": "success", "run_id": data["run_id"], "persisted": persisted, **data}
 
 
 async def benchmark_compare(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
@@ -186,6 +199,42 @@ async def benchmark_list(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
     return {"count": len(summary), "runs": summary}
 
 
+async def benchmark_history(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
+    from datetime import datetime, timedelta, timezone
+
+    days = args.get("days", 30)
+    limit = args.get("limit", 50)
+    offset = args.get("offset", 0)
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    runs = await ctx.store.list_runs(
+        model_id=args.get("model_id"),
+        workload_type=args.get("workload_type"),
+        limit=limit,
+        since=since,
+        offset=offset,
+    )
+    summary = [
+        {
+            "run_id": r["run_id"],
+            "timestamp": r.get("timestamp"),
+            "model": r.get("model", {}).get("name"),
+            "workload": r.get("workload", {}).get("type"),
+            "precision": r.get("model", {}).get("precision"),
+            "latency_p50_ms": r.get("results", {}).get("latency", {}).get("p50_ms"),
+            "throughput_sps": r.get("results", {}).get("throughput", {}).get("samples_per_second"),
+        }
+        for r in runs
+    ]
+    return {
+        "count": len(summary),
+        "days": days,
+        "offset": offset,
+        "limit": limit,
+        "runs": summary,
+    }
+
+
 def _to_markdown(rows: List[Dict[str, Any]]) -> str:
     if not rows:
         return "No results."
@@ -210,4 +259,5 @@ HANDLERS.update({
     "benchmark_run": benchmark_run,
     "benchmark_compare": benchmark_compare,
     "benchmark_list": benchmark_list,
+    "benchmark_history": benchmark_history,
 })
