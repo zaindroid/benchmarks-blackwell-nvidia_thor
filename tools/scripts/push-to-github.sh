@@ -13,7 +13,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-REPO="${REPO:-zaindroid/thor-ai-platform}"
+REPO="${REPO:-zaindroid/benchmarks-blackwell-nvidia_thor}"
 REMOTE="origin"
 
 if [ -z "$(git remote get-url $REMOTE 2>/dev/null || true)" ]; then
@@ -34,4 +34,4 @@ echo "==> Pushing main to $REMOTE ($REPO)"
 git push -u $REMOTE main
 
 echo "==> Done: https://github.com/$REPO"
-echo "Next: follow docs/launch-plan.md and docs/hosting-zorc.md"
+echo "Next: follow docs/launch-plan.md"

@@ -1,15 +1,14 @@
-"""Platform deployment endpoints (zorc-compatible contract).
+"""Platform deployment endpoints (hosting contract).
 
-Satisfies the endpoints required by the zorc deployment platform
-(see docs/hosting-zorc.md and deploy/app.yaml):
+Satisfies the endpoints required by typical deployment platforms:
 
 * ``GET /health``    -> ``{"status": "ok"}`` — must NOT touch the database
 * ``GET /ready``     -> 200 once dependencies (DB etc.) are reachable
 * ``GET /version``   -> ``{"sha": ..., "built": ...}``
 * ``GET /openapi.json`` — provided automatically by FastAPI
 
-Also honours zorc conventions: JSON logs to stdout (when ``APP_ENV`` is
-set) and environment-only configuration.
+Also honours deployment conventions: JSON logs to stdout (when
+``APP_ENV`` is set) and environment-only configuration.
 """
 
 from __future__ import annotations

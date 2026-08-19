@@ -133,7 +133,7 @@ optional `hypothesis`, `config`, `results`, `metrics`, `tags`, `description`.
 Serves the standard MCP streamable-HTTP protocol at `/mcp` (JSON-RPC
 over POST + SSE responses), plus the platform endpoints
 `/health`, `/ready`, `/version`, `/openapi.json`. Any MCP client can
-connect with a URL + bearer token (see docs/hosting-zorc.md).
+connect with a URL + bearer token.
 
 ## Leaderboard API (website/backend)
 

@@ -1,13 +1,12 @@
 """ThorMCPClient — async MCP client used by examples and automation.
 
 Connects to a ThorMCP server either over stdio (spawns ``thor-mcp``)
-or to any remote streamable-HTTP MCP endpoint (e.g. a hosted ThorMCP
-or the user's ``zorc`` server)::
+or to any remote streamable-HTTP MCP endpoint (a hosted ThorMCP) ::
 
     async with ThorMCPClient(config_path="thor-config.yaml") as client:
         status = await client.call_tool("hardware.status", {})
 
-    async with ThorMCPClient(url="https://mcp.zaindroid.me/mcp",
+    async with ThorMCPClient(url="https://mcp.example.com/mcp",
                              headers={"Authorization": "Bearer <token>"}) as client:
         tools = await client.list_tools()
 """

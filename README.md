@@ -7,7 +7,6 @@ Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 [![Tests](https://img.shields.io/badge/tests-107%20passing-green)]()
 [![MCP](https://img.shields.io/badge/MCP-13%20tools-6a4caf)]()
 [![Research](https://img.shields.io/badge/paper-draft-blueviolet)](paper/thorai-paper.md)
-[![Hosting](https://img.shields.io/badge/zorc-deployable-0b7a3b)](docs/hosting-zorc.md)
 
 | Component | What it does |
 | --- | --- |
@@ -19,8 +18,7 @@ Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 
 Docs: [architecture](docs/architecture.md) · [getting started](docs/getting-started.md) ·
 [benchmarking guide](docs/benchmarking-guide.md) · [API reference](docs/api-reference.md) ·
-[research paper draft](paper/thorai-paper.md) · [Thor runbook](docs/thor-device-runbook.md) ·
-[zorc hosting](docs/hosting-zorc.md)
+[research paper draft](paper/thorai-paper.md) · [Thor runbook](docs/thor-device-runbook.md)
 
 ## Repository layout
 
@@ -221,9 +219,11 @@ device IPs, API keys and database credentials.
 
 ## Hosting
 
-ThorMCP is deployable as a remote streamable-HTTP MCP server on the
-[zorc](https://mcp.zaindroid.me) platform — see [docs/hosting-zorc.md](docs/hosting-zorc.md)
-for the manifest, contract endpoints (`/health`, `/ready`, `/version`) and deploy steps.
+ThorMCP can be hosted as a remote streamable-HTTP MCP server on any
+container platform: `thor-mcp --http-mcp` serves the standard MCP
+protocol at `/mcp` plus deployment endpoints (`/health`, `/ready`,
+`/version`, `/openapi.json`); storage falls back to PostgreSQL via
+`DATABASE_URL` when provided (see [deploy/Dockerfile.mcp](deploy/Dockerfile.mcp)).
 
 ## Roadmap (staged)
 

@@ -24,7 +24,7 @@ def configure_logging(level: int | str = _DEFAULT_LEVEL, json: bool | None = Non
     """Configure global logging for the platform.
 
     On deployed environments (``APP_ENV`` set) logs go to stdout as
-    JSON with the level from ``LOG_LEVEL``, matching the zorc platform
+    JSON with the level from ``LOG_LEVEL``, matching the deployment
     contract (structured JSON logs to stdout, never files).
     """
     import os

@@ -1,8 +1,8 @@
 # Optional image for the ThorMCP streamable-HTTP server.
-# zorc's build-autodetection can also build this repo directly from
+# Build autodetection can also build this repo directly from
 # pyproject.toml (python app); this Dockerfile is for explicit control.
-# zorc hard rule: no host port binding — Traefik reaches the container by
-# name on the shared network, so EXPOSE is informational only.
+# No host port binding — the host routes to the container by name on the
+# shared network, so EXPOSE is informational only.
 
 FROM python:3.12-slim
 

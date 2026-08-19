@@ -30,7 +30,7 @@ def create_app(server: Any) -> FastAPI:
     async def _permission_error(request: Request, exc: PermissionError):
         return JSONResponse(status_code=401, content={"detail": str(exc)})
 
-    # Zorc platform contract endpoints (/health, /ready, /version).
+    # Platform contract endpoints (/health, /ready, /version).
     from thor_mcp.deploy import platform_router
 
     app.include_router(platform_router())

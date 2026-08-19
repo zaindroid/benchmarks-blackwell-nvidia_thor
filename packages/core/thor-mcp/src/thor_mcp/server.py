@@ -101,9 +101,9 @@ class ThorMCPServer:
                  force_memory: bool = False, log_level: str = "INFO"):
         configure_logging(log_level)
         self.config = ThorConfig.load(config_path)
-        # Deployment: MCP_SECRET_KEY comes from the environment (zorc
-        # generates it at deploy time). Per the platform contract we
-        # fail loudly in production instead of defaulting silently.
+        # Deployment: MCP_SECRET_KEY comes from the environment. Per the
+        # hosting contract we fail loudly in production instead of
+        # defaulting silently.
         secret = os.getenv("MCP_SECRET_KEY")
         if secret is None and os.getenv("APP_ENV"):
             raise RuntimeError(
@@ -233,8 +233,7 @@ class ThorMCPServer:
         """Serve the MCP streamable-HTTP transport (see ``thor_mcp.http_mcp``).
 
         The MCP endpoint is at ``http://<host>:<port>/mcp`` — a standard
-        streamable-HTTP MCP server address (same protocol as remote MCP
-        servers like ``zorc``), usable from any MCP client.
+        streamable-HTTP MCP server address, usable from any MCP client.
         """
         import uvicorn
 

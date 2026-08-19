@@ -9,11 +9,8 @@ one-command GitHub push.
 2. [ ] Set the real repo URL (replace `yourusername/thor-ai-platform`):
    - README badge + docs links
    - `paper/thorai-paper.tex` author line
-   - `docs/hosting-zorc.md` domain placeholder
 3. [ ] Post the drafts below (edit to taste)
-4. [ ] Optional: deploy on zorc (`docs/hosting-zorc.md`) so the
-   "Live at mcp.zaindroid.me/mcp" claim is real
-5. [ ] Run `docs/thor-device-runbook.md` on real hardware, then update
+4. [ ] Run `docs/thor-device-runbook.md` on real hardware, then update
    the README benchmark table + paper with Thor numbers
 
 ## Post drafts
@@ -29,7 +26,7 @@ one-command GitHub push.
 > ✅ TensorRT + quantization optimization toolchain
 > ✅ Community leaderboard with submission portal
 >
-> 107 tests passing. Live at mcp.zaindroid.me/mcp.
+> 107 tests passing.
 >
 > GitHub: <repo url> · Paper: <repo url>/paper/thorai-paper.md
 >
@@ -90,6 +87,5 @@ one-command GitHub push.
 ## Key claims to verify before posting
 
 - "107 tests passing" — `pytest packages/` + example suites
-- "Live at mcp.zaindroid.me/mcp" — only after the zorc deploy succeeds
 - YOLOv8n numbers are dev-workstation reference values (CPU torch),
   clearly labeled until real Thor numbers exist

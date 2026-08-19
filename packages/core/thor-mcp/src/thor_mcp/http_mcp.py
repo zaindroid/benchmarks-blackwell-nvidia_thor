@@ -3,8 +3,7 @@
 Serves the ThorMCP server over the standard MCP streamable-HTTP
 protocol (JSON-RPC over POST + SSE stream for responses), so any
 MCP-compatible client (Claude Desktop, Codex, Cursor, opencode, ...)
-can connect to a remote/hosted ThorMCP endpoint — exactly like a
-remote MCP server such as the user's ``zorc`` endpoint.
+can connect to a remote/hosted ThorMCP endpoint.
 
 Run with ``thor-mcp --http-mcp --port 8000``; the MCP endpoint lives
 at ``/mcp``.
@@ -102,7 +101,7 @@ def create_streamable_http_app(mcp_server: Server, server_name: str = "thor-mcp"
         expose_headers=["Mcp-Session-Id", "mcp-session-id"],
     )
 
-    # Zorc platform contract endpoints (/health, /ready, /version).
+    # Platform contract endpoints (/health, /ready, /version).
     from thor_mcp.deploy import platform_router
 
     app.include_router(platform_router())

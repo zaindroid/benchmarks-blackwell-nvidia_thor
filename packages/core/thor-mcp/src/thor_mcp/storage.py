@@ -232,8 +232,8 @@ class BenchmarkStore:
 
                 import asyncpg  # noqa: F401
 
-                # DATABASE_URL (provided by deployment platforms such as
-                # zorc) takes precedence over the config file.
+                # DATABASE_URL (provided by deployment platforms) takes
+                # precedence over the config file.
                 dsn = os.getenv("DATABASE_URL") or config.database.postgres  # type: ignore[union-attr]
                 self._pg = _PostgresBackend(dsn)
             except Exception:  # pragma: no cover
