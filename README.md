@@ -219,11 +219,12 @@ device IPs, API keys and database credentials.
 
 ## Hosting
 
-ThorMCP can be hosted as a remote streamable-HTTP MCP server on any
-container platform: `thor-mcp --http-mcp` serves the standard MCP
-protocol at `/mcp` plus deployment endpoints (`/health`, `/ready`,
-`/version`, `/openapi.json`); storage falls back to PostgreSQL via
-`DATABASE_URL` when provided (see [deploy/Dockerfile.mcp](deploy/Dockerfile.mcp)).
+The whole platform runs as one composed app ([platform_app.py](platform_app.py),
+[Dockerfile](Dockerfile)): the MCP endpoint at `/mcp`, the leaderboard
+API at `/api/*`, the React web UI at `/`, plus deployment endpoints
+(`/health`, `/ready`, `/version`, `/openapi.json`). Storage persists
+to PostgreSQL via `DATABASE_URL` when provided (`app.yaml`). The MCP
+transport can also be hosted standalone with `thor-mcp --http-mcp`.
 
 ## Roadmap (staged)
 

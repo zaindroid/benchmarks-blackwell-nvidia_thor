@@ -21,6 +21,31 @@ from mcp.server.lowlevel import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 from mcp.types import PromptsCapability, ResourcesCapability, ServerCapabilities, ToolsCapability
+from starlette.routing import Route as StarletteRoute
+from starlette.routing import compile_path
+
+
+class ASGIRoute(StarletteRoute):
+    """A route that passes the raw ASGI scope to its handler.
+
+    Starlette's ``Mount`` only matches ``/mcp/...`` (it requires a
+    trailing slash), so the exact path ``/mcp`` falls through to any
+    catch-all (e.g. a static file mount at ``/``) and is shadowed.
+    This route matches the exact path and hands the raw ASGI scope to
+    the streamable-HTTP transport (POST/GET/DELETE/OPTIONS).
+    """
+
+    def __init__(self, path: str, asgi_app: Any, methods: list[str] | None = None,
+                 name: str | None = None):
+        self.path = path
+        self.endpoint = asgi_app
+        self.asgi_app = asgi_app
+        self.name = name or "asgi"
+        self.methods = set(methods or ["GET", "POST", "DELETE", "OPTIONS"])
+        self.path_regex, self.param_convertors, _ = compile_path(path)
+
+    async def handle(self, scope: Any, receive: Any, send: Any) -> None:
+        await self.asgi_app(scope, receive, send)
 
 
 class StreamableHTTPServer:
@@ -106,6 +131,8 @@ def create_streamable_http_app(mcp_server: Server, server_name: str = "thor-mcp"
 
     app.include_router(platform_router())
 
-    # Raw ASGI mount: the transport handles full HTTP/SSE semantics.
-    app.mount("/mcp", http_server.handle_request)
+    # Raw ASGI route: the transport handles full HTTP/SSE semantics.
+    # An exact-path route (not a Mount) so a catch-all static mount at
+    # "/" can never shadow it (Starlette Mounts require a trailing slash).
+    app.router.routes.insert(0, ASGIRoute("/mcp", http_server.handle_request))
     return app
