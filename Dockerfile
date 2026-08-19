@@ -22,12 +22,12 @@ COPY platform_app.py ./
 COPY --from=frontend /app/dist /app/website/frontend/dist
 
 RUN pip install --no-cache-dir \
-    -e /packages/core/thor-core \
+    -e "/packages/core/thor-core[db]" \
     -e /packages/core/thor-sdk \
     -e /packages/benchmarks/thor-benchmark \
     -e /packages/benchmarks/thor-models \
-    -e /packages/core/thor-mcp \
-    -e /website/backend
+    -e "/packages/core/thor-mcp[postgres]" \
+    -e "/website/backend[postgres]"
 
 # Fail loudly in production if required secrets are missing.
 ENV APP_ENV=production
