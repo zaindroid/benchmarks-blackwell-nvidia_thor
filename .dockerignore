@@ -1,5 +1,6 @@
-# Keep the build context lean. .git is intentionally NOT excluded —
-# the buildmeta Dockerfile stage stamps /version with the real commit sha.
+# Keep the build context lean. Commit sha for /version comes from Coolify's
+# SOURCE_COMMIT build arg, not from .git, so it's excluded here.
+.git/
 __pycache__/
 *.py[cod]
 *.egg-info/

@@ -5,16 +5,6 @@
 # No host port binding — the host routes to the container by name on the
 # shared network, so EXPOSE is informational only.
 
-# --- build metadata -------------------------------------------------------
-# Stamp the real git sha + build time from the build context (.git clone)
-# so GET /version reports actual values without external build args.
-# Falls back to "dev" when .git is unavailable (e.g. archive builds).
-FROM alpine/git AS buildmeta
-COPY .git /repo/.git
-RUN mkdir -p /out && \
-    (git -C /repo rev-parse --short HEAD 2>/dev/null || echo dev) > /out/sha && \
-    (date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo dev) > /out/built
-
 # --- frontend --------------------------------------------------------------
 FROM node:20-alpine AS frontend
 WORKDIR /app
@@ -33,13 +23,24 @@ COPY pyproject.toml thor-config.yaml ./
 COPY platform_app.py ./
 COPY --from=frontend /app/dist /app/website/frontend/dist
 
-# Build metadata (env overrides the stamped files; see thor_mcp.deploy).
-ARG THOR_BUILD_SHA=dev
-ARG THOR_BUILD_TIME=dev
-ENV THOR_BUILD_SHA=${THOR_BUILD_SHA} \
-    THOR_BUILD_TIME=${THOR_BUILD_TIME}
-COPY --from=buildmeta /out/sha /app/.build_sha
-COPY --from=buildmeta /out/built /app/.build_time
+# Build metadata. SOURCE_COMMIT is auto-injected by Coolify as a build arg
+# (application setting include_source_commit_in_build=true) -- no .git copy
+# needed, and no dependency on Coolify's git-import step actually leaving
+# .git in the build context (it doesn't).
+#
+# build_info() (thor_mcp.deploy) resolves THOR_BUILD_SHA/THOR_BUILD_TIME
+# env vars first, then these stamped files, then "dev". THOR_BUILD_SHA is
+# set as an env var here (real value when SOURCE_COMMIT is known, else the
+# harmless "dev" literal). THOR_BUILD_TIME is deliberately NOT set as an
+# env var -- there's no real build-arg source for it, and setting it to a
+# literal "dev" env var would permanently shadow the real timestamp
+# stamped into .build_time below. Runtime env var overrides still work for
+# both if anyone ever wants to pass one explicitly.
+ARG SOURCE_COMMIT=dev
+ARG THOR_BUILD_SHA=${SOURCE_COMMIT}
+ENV THOR_BUILD_SHA=${THOR_BUILD_SHA}
+RUN echo "${THOR_BUILD_SHA}" > /app/.build_sha && \
+    date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build_time
 
 RUN pip install --no-cache-dir \
     -e "/packages/core/thor-core[db]" \
