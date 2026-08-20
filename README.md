@@ -5,8 +5,9 @@ Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 [![Tests](https://img.shields.io/badge/tests-107%20passing-green)]()
-[![MCP](https://img.shields.io/badge/MCP-13%20tools-6a4caf)]()
+[![MCP](https://img.shields.io/badge/MCP-14%20tools-6a4caf)]()
 [![Research](https://img.shields.io/badge/paper-draft-blueviolet)](paper/thorai-paper.md)
+[![Live](https://img.shields.io/badge/live-thor-platform.zaindroid.me-0b7a3b)](https://thor-platform.zaindroid.me)
 
 | Component | What it does |
 | --- | --- |
@@ -225,6 +226,9 @@ API at `/api/*`, the React web UI at `/`, plus deployment endpoints
 (`/health`, `/ready`, `/version`, `/openapi.json`). Storage persists
 to PostgreSQL via `DATABASE_URL` when provided (`app.yaml`). The MCP
 transport can also be hosted standalone with `thor-mcp --http-mcp`.
+
+**Live deployment**: <https://thor-platform.zaindroid.me> — MCP endpoint
+at `/mcp`, leaderboard API + web UI at the root.
 
 ## Roadmap (staged)
 
