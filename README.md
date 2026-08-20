@@ -18,7 +18,7 @@ Open-source benchmarking and deployment platform for **NVIDIA DRIVE Thor**.
 | **Leaderboard** | REST API + React frontend for community results |
 
 Docs: [architecture](docs/architecture.md) · [getting started](docs/getting-started.md) ·
-[benchmarking guide](docs/benchmarking-guide.md) · [API reference](docs/api-reference.md) ·
+[benchmarking guide](docs/benchmarking-guide.md) · [MCP user guide](docs/mcp-user-guide.md) · [API reference](docs/api-reference.md) ·
 [research paper draft](paper/thorai-paper.md) · [Thor runbook](docs/thor-device-runbook.md)
 
 ## Repository layout

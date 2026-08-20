@@ -109,6 +109,19 @@ class _PostgresBackend:
         self._pool = await asyncpg.create_pool(
             self._dsn, min_size=1, max_size=5, timeout=3, command_timeout=5,
         )
+        # asyncpg returns jsonb columns as *strings* unless a codec is
+        # registered; without this, get_run/list_runs hand benchmark
+        # tools JSON strings and every .get() crashes. Decode to dicts.
+        try:
+            await self._pool.set_type_codec(
+                "jsonb", encoder=json.dumps, decoder=json.loads,
+                schema="pg_catalog",
+            )
+        except TypeError:  # older asyncpg wants an explicit format
+            await self._pool.set_type_codec(
+                "jsonb", encoder=json.dumps, decoder=json.loads,
+                schema="pg_catalog", format="text",
+            )
 
     async def close(self) -> None:
         if self._pool is not None:
@@ -168,14 +181,24 @@ class _PostgresBackend:
         return [self._row_to_run(r) for r in rows]
 
     @staticmethod
+    def _to_obj(value: Any) -> Any:
+        """jsonb comes back as str from asyncpg without a codec."""
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (ValueError, TypeError):
+                return value
+        return value
+
+    @staticmethod
     def _row_to_run(row: Any) -> Dict[str, Any]:
         return {
             "run_id": row["run_id"],
             "timestamp": row["timestamp"].isoformat(),
-            "hardware": row["hardware_info"],
-            "model": row["model_info"],
-            "workload": row["workload_info"],
-            "results": row["results"],
+            "hardware": _PostgresBackend._to_obj(row["hardware_info"]),
+            "model": _PostgresBackend._to_obj(row["model_info"]),
+            "workload": _PostgresBackend._to_obj(row["workload_info"]),
+            "results": _PostgresBackend._to_obj(row["results"]),
             "git_commit": row["git_commit"],
         }
 

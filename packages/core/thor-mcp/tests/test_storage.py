@@ -80,3 +80,41 @@ async def test_save_experiment_upserts(store):
     fetched = await store.get_experiment("exp-2")
     assert fetched["status"] == "completed"
     assert fetched["results"] == {"accuracy": 0.5}
+
+
+def test_row_to_run_decodes_jsonb_strings():
+    """asyncpg returns jsonb as str without a codec; _row_to_run must decode."""
+    from datetime import datetime, timezone
+    from thor_mcp.storage import _PostgresBackend
+
+    row = {
+        "run_id": "run-test",
+        "timestamp": datetime(2026, 8, 20, tzinfo=timezone.utc),
+        "hardware_info": '{"gpu_name": "thor", "gpu_available": false}',
+        "model_info": '{"name": "ultralytics/yolov8n", "precision": "fp16"}',
+        "workload_info": '{"type": "vision", "batch_sizes": [1, 4]}',
+        "results": '{"latency": {"p50_ms": 7.8}}',
+        "git_commit": "abc1234",
+    }
+    run = _PostgresBackend._row_to_run(row)
+    assert run["model"]["name"] == "ultralytics/yolov8n"
+    assert run["results"]["latency"]["p50_ms"] == 7.8
+    assert run["workload"]["batch_sizes"] == [1, 4]
+    assert run["hardware"]["gpu_available"] is False
+
+
+def test_row_to_run_passes_through_dicts():
+    from datetime import datetime, timezone
+    from thor_mcp.storage import _PostgresBackend
+
+    row = {
+        "run_id": "run-test",
+        "timestamp": datetime(2026, 8, 20, tzinfo=timezone.utc),
+        "hardware_info": {"gpu_name": "thor"},
+        "model_info": {"name": "m"},
+        "workload_info": {"type": "vision"},
+        "results": {},
+        "git_commit": None,
+    }
+    run = _PostgresBackend._row_to_run(row)
+    assert run["model"] == {"name": "m"}
