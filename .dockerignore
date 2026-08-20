@@ -1,0 +1,22 @@
+# Keep the build context lean. .git is intentionally NOT excluded —
+# the buildmeta Dockerfile stage stamps /version with the real commit sha.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+node_modules/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+results/
+*.log
+.env
+.env.local
+website/frontend/dist/
+website/frontend/node_modules/

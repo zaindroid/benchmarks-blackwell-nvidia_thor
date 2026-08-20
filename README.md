@@ -147,6 +147,32 @@ async def main():
 asyncio.run(main())
 ```
 
+Connect to the **live deployment** (no local install needed):
+
+```python
+import asyncio
+from thor_mcp.client import ThorMCPClient
+
+async def main():
+    async with ThorMCPClient(url="https://thor-platform.zaindroid.me/mcp") as client:
+        tools = await client.list_tools()
+        print(f"{len(tools)} MCP tools available")
+
+asyncio.run(main())
+```
+
+Or add it to any MCP-capable assistant (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "thor-live": {
+      "url": "https://thor-platform.zaindroid.me/mcp"
+    }
+  }
+}
+```
+
 ### Tools exposed over MCP
 
 | Tool | Purpose |

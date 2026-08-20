@@ -76,3 +76,27 @@ def test_platform_router_in_fastapi():
         assert client.get("/health").json() == {"status": "ok"}
         assert client.get("/ready").status_code == 200
         assert client.get("/version").json()["sha"] == "dev"
+
+
+def test_build_info_falls_back_to_stamped_files(monkeypatch):
+    from thor_mcp import deploy
+
+    monkeypatch.delenv("THOR_BUILD_SHA", raising=False)
+    monkeypatch.delenv("THOR_BUILD_TIME", raising=False)
+    monkeypatch.setattr(deploy, "_read_build_file",
+                        lambda name: "abc1234" if name == ".build_sha"
+                        else "2026-08-20T00:00:00Z")
+    info = deploy.build_info()
+    assert info["sha"] == "abc1234"
+    assert info["built"] == "2026-08-20T00:00:00Z"
+
+
+def test_build_info_env_overrides_stamped_files(monkeypatch):
+    from thor_mcp import deploy
+
+    monkeypatch.setenv("THOR_BUILD_SHA", "envsha")
+    monkeypatch.setenv("THOR_BUILD_TIME", "envtime")
+    monkeypatch.setattr(deploy, "_read_build_file", lambda name: "filesha")
+    info = deploy.build_info()
+    assert info["sha"] == "envsha"
+    assert info["built"] == "envtime"

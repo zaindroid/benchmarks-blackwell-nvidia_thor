@@ -14,6 +14,7 @@ Also honours deployment conventions: JSON logs to stdout (when
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from fastapi import APIRouter, Response, status
@@ -21,12 +22,36 @@ from fastapi import APIRouter, Response, status
 ReadyCheck = Callable[[], Awaitable[bool]]
 
 
+def _read_build_file(name: str) -> Optional[str]:
+    """Read a stamped build-metadata file (``/app`` or repo root)."""
+    candidates = [
+        Path("/app") / name,
+        Path(__file__).resolve().parents[5] / name,
+    ]
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        except OSError:
+            continue
+    return None
+
+
 def build_info() -> dict[str, Any]:
-    """Return build metadata (git sha + build time) from the environment."""
-    return {
-        "sha": os.getenv("THOR_BUILD_SHA", "dev"),
-        "built": os.getenv("THOR_BUILD_TIME", "dev"),
-    }
+    """Return build metadata (git sha + build time).
+
+    Resolution order: ``THOR_BUILD_SHA``/``THOR_BUILD_TIME`` env vars
+    (from build args), then files stamped at image build time
+    (``.build_sha`` / ``.build_time``), then ``dev``.
+    """
+    sha = os.getenv("THOR_BUILD_SHA") or ""
+    built = os.getenv("THOR_BUILD_TIME") or ""
+    if not sha or sha == "dev":
+        sha = _read_build_file(".build_sha") or "dev"
+    if not built or built == "dev":
+        built = _read_build_file(".build_time") or "dev"
+    return {"sha": sha, "built": built}
 
 
 async def default_ready_check() -> bool:
