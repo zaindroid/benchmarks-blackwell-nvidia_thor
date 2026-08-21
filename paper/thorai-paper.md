@@ -223,9 +223,9 @@ throughput −5%, power +15%).
 
 | System | Public Thor benchmarks | MCP-native access | Result schema | Optimization toolchain |
 | --- | --- | --- | --- | --- |
-| ThorAI (this work) | ✅ (first) | ✅ | ✅ | ✅ |
-| Generic inference benchmarks (e.g., MLPerf) | ❌ | ❌ | partial | partial |
-| Vendor SDK demos | ❌ | ❌ | ❌ | partial |
+| ThorAI (this work) | Yes (first) | Yes | Yes | Yes |
+| Generic inference benchmarks (e.g., MLPerf) | No | No | partial | partial |
+| Vendor SDK demos | No | No | No | partial |
 
 To our knowledge ThorAI is the first open platform that combines a
 public Thor benchmark suite, MCP-driven benchmarking, and reference

@@ -20,11 +20,11 @@ one-command GitHub push.
 > I built the first open-source platform for NVIDIA DRIVE Thor — the
 > automotive supercomputer most developers never get access to.
 >
-> ✅ MCP server with 13 tools (AI assistants can benchmark models)
-> ✅ Real BEV perception pipeline (multi-camera sensor fusion)
-> ✅ Vision-language model with safety filters
-> ✅ TensorRT + quantization optimization toolchain
-> ✅ Community leaderboard with submission portal
+> MCP server with 13 tools (AI assistants can benchmark models)
+> Real BEV perception pipeline (multi-camera sensor fusion)
+> Vision-language model with safety filters
+> TensorRT + quantization optimization toolchain
+> Community leaderboard with submission portal
 >
 > 107 tests passing.
 >

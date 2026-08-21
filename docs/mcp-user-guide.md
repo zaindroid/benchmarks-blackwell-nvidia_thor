@@ -1,32 +1,43 @@
 # Benchmarking Models with the ThorMCP Server
 
-A simple, copy-paste guide to benchmarking AI models through the
-ThorAI MCP server — no local install required.
+This guide explains how to benchmark AI models through the ThorMCP
+server. The service is hosted, so no local installation is required.
 
-**Live endpoint:** `https://thor-platform.zaindroid.me/mcp`
+**Endpoint:** `https://thor-platform.zaindroid.me/mcp`
 
 ---
 
-## 1. What this is
+## Quickstart
 
-ThorMCP is an MCP server that exposes model benchmarking as
-conversation. Any MCP-capable assistant (Claude Desktop, Cursor,
-Codex, opencode, ...) — or your own Python — can:
+1. **Connect.** Add the endpoint to an MCP client (section 2) or use
+   the Python client (section 3).
+2. **Run a benchmark.** Request a benchmark of `ultralytics/yolov8n`
+   at batch sizes 1, 4, 8, iterations 100. Results are returned
+   immediately and stored automatically.
+3. **Review results.** View the public leaderboard at
+   <https://thor-platform.zaindroid.me> or query stored runs with
+   `benchmark_list`.
 
-- run a benchmark (latency, throughput, power, memory, thermal)
+---
+
+## 1. Overview
+
+ThorMCP exposes model benchmarking through the Model Context Protocol
+(MCP). Clients that support MCP — Claude Desktop, Cursor, Codex,
+opencode — and programs using the Python client can:
+
+- run benchmarks (latency, throughput, power, memory, thermal)
 - compare models and configurations
-- look up the model registry
+- query the model registry
 - generate reports
 - track experiments
 
-Results are stored in PostgreSQL and shown on the public leaderboard
-at <https://thor-platform.zaindroid.me>.
+Results are stored in PostgreSQL and published on the leaderboard at
+<https://thor-platform.zaindroid.me>.
 
 ---
 
-## 2. Option A — Use it from an AI assistant (easiest)
-
-Add the server to your client, then just ask in plain language.
+## 2. Connect from an MCP client
 
 ### Claude Desktop (`claude_desktop_config.json`)
 
@@ -72,17 +83,17 @@ url = "https://thor-platform.zaindroid.me/mcp"
 }
 ```
 
-Restart your assistant, then try prompts like:
+After restarting the client, the following requests are available:
 
 > - "Run a simulated benchmark of ultralytics/yolov8n at batch sizes 1, 4, 8"
-> - "What models are in the registry?"
+> - "List the models in the registry"
 > - "Compare the last two benchmark runs"
 > - "Generate a markdown report of the latest run"
-> - "What hardware is this platform running on?"
+> - "Report the current hardware status"
 
 ---
 
-## 3. Option B — Use it from Python
+## 3. Python client
 
 Install the client package:
 
@@ -90,7 +101,7 @@ Install the client package:
 pip install thor-mcp
 ```
 
-Then run a benchmark:
+Run a benchmark and compare two models:
 
 ```python
 import asyncio
@@ -100,11 +111,12 @@ URL = "https://thor-platform.zaindroid.me/mcp"
 
 async def main():
     async with ThorMCPClient(url=URL) as mcp:
-        # 1. What can I do?
+        # List available tools.
         tools = await mcp.list_tools()
         print(f"{len(tools)} tools available")
 
-        # 2. Benchmark a model (simulate=True is instant, no GPU needed)
+        # Benchmark a model. simulate=True returns deterministic results
+        # without requiring a GPU.
         run1 = await mcp.call_tool("benchmark_run", {
             "model_id": "ultralytics/yolov8n",
             "workload_type": "vision",
@@ -118,7 +130,7 @@ async def main():
         print("p50 latency:", run1["results"]["latency"]["p50_ms"], "ms")
         print("throughput:", run1["results"]["throughput"]["samples_per_second"], "samples/s")
 
-        # 3. Benchmark a second model and compare
+        # Benchmark a second model and compare.
         run2 = await mcp.call_tool("benchmark_run", {
             "model_id": "ultralytics/yolov8s",
             "workload_type": "vision",
@@ -127,24 +139,25 @@ async def main():
         comparison = await mcp.call_tool("benchmark_compare", {
             "benchmark_ids": [run_id, run2["run_id"]],
         })
-        print("comparison:", comparison["rows"])
+        print("comparison:", comparison["comparison"])
 
 asyncio.run(main())
 ```
 
 ---
 
-## 4. Option C — Use it with curl
+## 4. curl
+
+Initialize a session:
 
 ```bash
-# initialize a session
 curl -sS https://thor-platform.zaindroid.me/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}}}'
 ```
 
-The response includes a session id; subsequent calls pass it back and
+The response includes a session id. Subsequent calls pass it back and
 use `tools/call`:
 
 ```bash
@@ -157,28 +170,28 @@ curl -sS https://thor-platform.zaindroid.me/mcp \
 
 ---
 
-## 5. The tools
+## 5. Tools
 
-| Tool | What it does |
+| Tool | Description |
 | --- | --- |
-| `benchmark_run` | **Run a benchmark** and store the result (core tool) |
-| `benchmark_compare` | Compare runs across models / configs |
-| `benchmark_list` | List stored runs (filter by model/workload) |
+| `benchmark_run` | Run a benchmark and store the result |
+| `benchmark_compare` | Compare runs across models or configurations |
+| `benchmark_list` | List stored runs, optionally filtered by model or workload |
 | `benchmark_history` | Query runs over a trailing time window |
-| `hardware_status` | Current hardware (GPU, CUDA, TensorRT versions) |
-| `models_list` / `models_register` | Browse / add models to the registry |
+| `hardware_status` | Report current hardware (GPU, CUDA, TensorRT versions) |
+| `models_list` / `models_register` | Query or extend the model registry |
 | `models_optimize` | Create an optimization profile (TensorRT, INT8 quantization) |
-| `models_deploy` | Build a deployment descriptor for an optimized model |
-| `datasets_list` / `datasets_register` | Browse / register datasets |
-| `reports_generate` | Generate a markdown report from a run |
-| `experiments_track` / `experiments_list` | Track / browse research experiments |
+| `models_deploy` | Create a deployment descriptor for an optimized model |
+| `datasets_list` / `datasets_register` | Query or register datasets |
+| `reports_generate` | Generate a report from a benchmark run |
+| `experiments_track` / `experiments_list` | Track or query research experiments |
 
 ---
 
-## 6. What a result looks like
+## 6. Result schema
 
-Every benchmark returns the same schema — you can compare any two runs
-directly:
+Every benchmark returns the same schema, so any two runs can be
+compared directly:
 
 ```json
 {
@@ -197,33 +210,32 @@ directly:
 }
 ```
 
-Key metrics: **p50/p95/p99 latency** (ms), **throughput** (samples/s
-or tokens/s), **power** (W), **memory** (MB), **thermal** (°C).
+Key metrics: p50/p95/p99 latency (ms), throughput (samples/s or
+tokens/s), power (W), memory (MB), thermal (C).
 
 ---
 
-## 7. Simulated vs. real numbers (important)
+## 7. Simulation and hardware runs
 
-The hosted endpoint runs in the cloud **without a GPU**, so real model
-inference (torch/ultralytics/transformers/TensorRT) is not available
-there. Two things to know:
+The hosted endpoint runs without a GPU, so real model inference
+(torch, ultralytics, transformers, TensorRT) is not available there.
 
-1. **`custom_config: {"simulate": true}`** runs instantly and
-   deterministically. Use it to explore the workflow, test your
-   prompts, and validate the result schema. Any model id works.
-2. **For real hardware numbers**, run the benchmark locally on your
-   machine (or a DRIVE Thor device) — see the [Benchmarking
-   Guide](benchmarking-guide.md) and the [Thor Device
-   Runbook](thor-device-runbook.md). The result JSON is identical, so
-   your real numbers drop straight into the same leaderboard schema.
+1. `custom_config: {"simulate": true}` produces deterministic results
+   without a GPU. Use it to validate the workflow and the result
+   schema. Any model id is accepted.
+2. For hardware measurements, run the benchmark locally on a machine
+   with the required runtime, or on a DRIVE Thor device. See the
+   [Benchmarking Guide](benchmarking-guide.md) and the [Thor Device
+   Runbook](thor-device-runbook.md). The result schema is identical,
+   so local results can be stored in the same leaderboard.
 
 ---
 
-## 8. Where results go
+## 8. Where results are stored
 
-Every `benchmark_run` is stored automatically. View them:
+Every `benchmark_run` is stored automatically. Results can be viewed:
 
-- **Web UI + leaderboard:** <https://thor-platform.zaindroid.me>
+- **Web UI and leaderboard:** <https://thor-platform.zaindroid.me>
 - **REST API:** `GET /api/leaderboard`, `GET /api/stats`
 - **Through MCP:** `benchmark_list`, `benchmark_history`, `benchmark_compare`
 
@@ -231,9 +243,9 @@ Every `benchmark_run` is stored automatically. View them:
 
 ## 9. Troubleshooting
 
-| Symptom | Fix |
+| Symptom | Resolution |
 | --- | --- |
-| "Connection failed" | Check the server: `curl https://thor-platform.zaindroid.me/health` should return `{"status":"ok"}` |
-| Real run hangs or errors on the hosted endpoint | It has no GPU — add `"custom_config": {"simulate": true}` or run locally (section 7) |
-| "Unknown model" | In simulate mode any id works; for real runs the model must be registered (`models_register`) and the runtime installed locally |
-| Can't see my run on the leaderboard | Use `benchmark_list` / `benchmark_history` — the leaderboard shows best-per-model |
+| Connection failed | Verify the server: `curl https://thor-platform.zaindroid.me/health` should return `{"status":"ok"}` |
+| Real run hangs or errors on the hosted endpoint | The hosted endpoint has no GPU; use `"custom_config": {"simulate": true}` or run locally (section 7) |
+| Unknown model | In simulation mode any model id is accepted; for real runs the model must be registered with `models_register` and the runtime installed locally |
+| Run not visible on the leaderboard | Use `benchmark_list` / `benchmark_history`; the leaderboard shows the best result per model |
