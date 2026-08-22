@@ -11,6 +11,7 @@ see website/database/migrations/001_initial_schema.sql.
 from __future__ import annotations
 
 import json
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -112,16 +113,25 @@ class _PostgresBackend:
         # asyncpg returns jsonb columns as *strings* unless a codec is
         # registered; without this, get_run/list_runs hand benchmark
         # tools JSON strings and every .get() crashes. Decode to dicts.
+        # A codec failure is non-fatal: _row_to_run/_to_obj decode
+        # strings defensively, so the pool is still usable.
         try:
             await self._pool.set_type_codec(
                 "jsonb", encoder=json.dumps, decoder=json.loads,
                 schema="pg_catalog",
             )
         except TypeError:  # older asyncpg wants an explicit format
-            await self._pool.set_type_codec(
-                "jsonb", encoder=json.dumps, decoder=json.loads,
-                schema="pg_catalog", format="text",
-            )
+            try:
+                await self._pool.set_type_codec(
+                    "jsonb", encoder=json.dumps, decoder=json.loads,
+                    schema="pg_catalog", format="text",
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.warning("jsonb codec unavailable; decoding manually",
+                               error=str(exc))
+        except Exception as exc:  # pragma: no cover
+            logger.warning("jsonb codec unavailable; decoding manually",
+                           error=str(exc))
 
     async def close(self) -> None:
         if self._pool is not None:
@@ -249,6 +259,8 @@ class BenchmarkStore:
         self._memory = _MemoryBackend()
         self._pg: Optional[_PostgresBackend] = None
         self._pg_checked = force_memory or config is None
+        self._pg_last_fail = 0.0
+        self._pg_retry_cooldown = 15.0  # seconds before retrying a failed connect
         if not self._pg_checked:
             try:
                 import os
@@ -264,15 +276,25 @@ class BenchmarkStore:
                 self._pg_checked = True
 
     async def _backend(self) -> Any:
-        """Return the postgres backend if usable, else the memory backend."""
+        """Return the postgres backend if usable, else the memory backend.
+
+        A failed connect is retried after a cooldown instead of falling
+        back to memory permanently, so a database that is briefly
+        unavailable at startup does not disable persistence for the
+        lifetime of the process.
+        """
         if self._pg is not None and not self._pg_checked:
+            if time.monotonic() - self._pg_last_fail < self._pg_retry_cooldown:
+                return self._memory
             self._pg_checked = True
             try:
                 await self._pg.connect()
             except Exception as exc:
                 logger.warning("postgres unavailable; using in-memory store",
                                error=str(exc))
-                self._pg = None
+                self._pg_last_fail = time.monotonic()
+                self._pg_checked = False
+                return self._memory
         return self._pg if self._pg is not None else self._memory
 
     async def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:

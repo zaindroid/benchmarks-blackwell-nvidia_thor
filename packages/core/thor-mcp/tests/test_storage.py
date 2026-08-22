@@ -118,3 +118,40 @@ def test_row_to_run_passes_through_dicts():
     }
     run = _PostgresBackend._row_to_run(row)
     assert run["model"] == {"name": "m"}
+
+
+async def test_backend_retries_after_cooldown(monkeypatch):
+    """A failed connect falls back to memory but is retried after the cooldown."""
+    from thor_mcp import storage as st
+
+    calls = {"n": 0}
+
+    class FakePG:
+        async def connect(self):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ConnectionError("db not ready yet")
+
+    store = st.BenchmarkStore.__new__(st.BenchmarkStore)
+    store._memory = st._MemoryBackend()
+    store._pg = FakePG()
+    store._pg_checked = False
+    store._pg_last_fail = 0.0
+    store._pg_retry_cooldown = 15.0
+
+    backend = await store._backend()
+    assert isinstance(backend, st._MemoryBackend)
+    assert store._pg_last_fail > 0
+    assert store._pg_checked is False
+
+    # within the cooldown window: no reconnect attempt
+    backend = await store._backend()
+    assert isinstance(backend, st._MemoryBackend)
+    assert calls["n"] == 1
+
+    # past the cooldown: reconnect succeeds and postgres is used from now on
+    monkeypatch.setattr(st.time, "monotonic", lambda: store._pg_last_fail + 20)
+    backend = await store._backend()
+    assert calls["n"] == 2
+    assert store._pg_checked is True
+    assert isinstance(backend, FakePG)
