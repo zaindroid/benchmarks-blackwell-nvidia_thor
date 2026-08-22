@@ -191,24 +191,29 @@ class HardwareMonitor:
         handle = self._handle
         if handle is None:
             return snapshot
-        try:
-            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-            mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            temp = pynvml.nvmlDeviceGetTemperature(
-                handle, pynvml.NVML_TEMPERATURE_GPU
-            )
+
+        def _safe(fn: Any) -> Any:
+            """Best-effort NVML query: None when unsupported/unavailable."""
             try:
-                power = pynvml.nvmlDeviceGetPowerUsage(handle)
+                return fn()
             except Exception:
-                power = None
-            snapshot.update(
-                gpu_utilization_pct=float(util.gpu),
-                memory_used_mb=round(mem.used / (1024 ** 2), 1),
-                gpu_temp_c=float(temp),
-                power_watts=float(power) / 1000.0 if power else None,
-            )
-        except Exception as exc:  # pragma: no cover
-            logger.debug("snapshot read failed", error=str(exc))
+                return None
+
+        # One unsupported query (e.g. utilization on automotive GPUs)
+        # must not drop the whole snapshot.
+        util = _safe(lambda: pynvml.nvmlDeviceGetUtilizationRates(handle))
+        mem = _safe(lambda: pynvml.nvmlDeviceGetMemoryInfo(handle))
+        temp = _safe(lambda: pynvml.nvmlDeviceGetTemperature(
+            handle, pynvml.NVML_TEMPERATURE_GPU))
+        power = _safe(lambda: pynvml.nvmlDeviceGetPowerUsage(handle))
+        if util is not None:
+            snapshot["gpu_utilization_pct"] = float(util.gpu)
+        if mem is not None:
+            snapshot["memory_used_mb"] = round(mem.used / (1024 ** 2), 1)
+        if temp is not None:
+            snapshot["gpu_temp_c"] = float(temp)
+        if power is not None:
+            snapshot["power_watts"] = float(power) / 1000.0
         return snapshot
 
     # -- queries --------------------------------------------------------
