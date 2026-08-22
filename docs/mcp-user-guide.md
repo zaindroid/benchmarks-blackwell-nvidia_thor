@@ -217,17 +217,33 @@ tokens/s), power (W), memory (MB), thermal (C).
 
 ## 7. Simulation and hardware runs
 
-The hosted endpoint runs without a GPU, so real model inference
-(torch, ultralytics, transformers, TensorRT) is not available there.
+The hosted endpoint (thor-platform.zaindroid.me) runs in the cloud
+without a GPU, so it only executes simulated benchmarks. Real model
+inference must run on the hardware itself.
 
 1. `custom_config: {"simulate": true}` produces deterministic results
    without a GPU. Use it to validate the workflow and the result
-   schema. Any model id is accepted.
-2. For hardware measurements, run the benchmark locally on a machine
-   with the required runtime, or on a DRIVE Thor device. See the
-   [Benchmarking Guide](benchmarking-guide.md) and the [Thor Device
-   Runbook](thor-device-runbook.md). The result schema is identical,
-   so local results can be stored in the same leaderboard.
+   schema. Any model id is accepted. This is the only mode the hosted
+   endpoint supports.
+2. **Real measurements happen on the device.** Install the model
+   runtimes and run the benchmark on a machine with an NVIDIA GPU, or
+   on a DRIVE Thor device. One command:
+
+   ```bash
+   ./tools/scripts/benchmark-device.sh                                # YOLOv8n fp16 baseline
+   ./tools/scripts/benchmark-device.sh --model meta-llama/Llama-3-8B --workload language --precision int8
+   ./tools/scripts/benchmark-device.sh --submit                       # also send results to the leaderboard
+   ```
+
+   This runs real inference with live NVML power, memory and thermal
+   sampling and writes result JSON + a markdown report. See the
+   [Thor Device Runbook](thor-device-runbook.md) for the full
+   workflow, including TensorRT engine builds and INT4 quantization.
+3. Real results reach the public leaderboard through the submission
+   portal (`--submit`, or the web form at the site root), where they
+   are stored pending review. The result schema is identical to
+   simulated runs, so any stored run can be compared against any
+   other.
 
 ---
 
