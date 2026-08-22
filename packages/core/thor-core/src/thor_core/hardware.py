@@ -94,34 +94,33 @@ def detect_hardware(cuda_device: int = 0) -> HardwareInfo:
         return info
 
     try:
-        name = pynvml.nvmlDeviceGetName(handle)
-        driver = pynvml.nvmlSystemGetDriverVersion()
-        cuda = pynvml.nvmlSystemGetCudaDriverVersion_v2()
-        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-        temp = pynvml.nvmlDeviceGetTemperature(
-            handle, pynvml.NVML_TEMPERATURE_GPU
-        )
-        try:
-            power = pynvml.nvmlDeviceGetEnforcedPowerLimit(handle)
-        except Exception:
-            power = None
-        try:
-            major, minor = pynvml.nvmlDeviceGetCudaComputeCapability(handle)
-            cc = f"{major}.{minor}"
-        except Exception:
-            cc = None
+        def _safe(fn: Any) -> Any:
+            """Best-effort NVML query: None when unsupported/unavailable."""
+            try:
+                return fn()
+            except Exception:
+                return None
 
-        info.gpu_available = True
-        info.gpu_name = name.decode() if isinstance(name, bytes) else str(name)
-        info.driver_version = driver.decode() if isinstance(driver, bytes) else str(driver)
-        info.cuda_version = str(cuda)
+        name = _safe(lambda: pynvml.nvmlDeviceGetName(handle))
+        driver = _safe(lambda: pynvml.nvmlSystemGetDriverVersion())
+        cuda = _safe(lambda: pynvml.nvmlSystemGetCudaDriverVersion_v2())
+        mem = _safe(lambda: pynvml.nvmlDeviceGetMemoryInfo(handle))
+        util = _safe(lambda: pynvml.nvmlDeviceGetUtilizationRates(handle))
+        temp = _safe(lambda: pynvml.nvmlDeviceGetTemperature(
+            handle, pynvml.NVML_TEMPERATURE_GPU))
+        power = _safe(lambda: pynvml.nvmlDeviceGetEnforcedPowerLimit(handle))
+        cc = _safe(lambda: pynvml.nvmlDeviceGetCudaComputeCapability(handle))
+
+        info.gpu_available = name is not None
+        info.gpu_name = name.decode() if isinstance(name, bytes) else (str(name) if name else None)
+        info.driver_version = (driver.decode() if isinstance(driver, bytes) else str(driver)) if driver else None
+        info.cuda_version = str(cuda) if cuda else None
         info.tensorrt_version = _tensorrt_version()
-        info.compute_capability = cc
-        info.gpu_temp_c = float(temp)
+        info.compute_capability = f"{cc[0]}.{cc[1]}" if cc else None
+        info.gpu_temp_c = float(temp) if temp else None
         info.power_limit_w = float(power) / 1000.0 if power else None
-        info.memory_total_mb = round(mem.total / (1024 ** 2), 1)
-        info.gpu_utilization_pct = float(util.gpu)
+        info.memory_total_mb = round(mem.total / (1024 ** 2), 1) if mem else None
+        info.gpu_utilization_pct = float(util.gpu) if util else None
         return info
     except Exception as exc:  # pragma: no cover - depends on environment
         logger.warning("failed to query hardware", error=str(exc))
