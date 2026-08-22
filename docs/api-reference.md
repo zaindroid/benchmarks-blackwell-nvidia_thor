@@ -135,6 +135,14 @@ over POST + SSE responses), plus the platform endpoints
 `/health`, `/ready`, `/version`, `/openapi.json`. Any MCP client can
 connect with a URL + bearer token.
 
+## Web UI API (platform_app)
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /api/benchmark/run` | Run a benchmark (same handler as the MCP tool; real runs dispatch to the connected Thor device) |
+| `GET /api/tools` | List MCP tools (name + description) |
+| `GET /api/hardware` | Current hardware status |
+
 ## Leaderboard API (website/backend)
 
 | Endpoint | Description |
