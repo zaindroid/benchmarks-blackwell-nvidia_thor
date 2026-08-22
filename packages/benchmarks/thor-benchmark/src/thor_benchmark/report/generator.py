@@ -99,6 +99,7 @@ def write_report(result: Dict[str, Any], path: str | Path, fmt: str = "markdown"
     out = Path(path)
     if out.suffix in ("", ".md") and fmt == "json":
         out = out.with_suffix(".json")
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(generate_report(result, fmt), encoding="utf-8")
     logger.info("report written", path=str(out), fmt=fmt)
     return out

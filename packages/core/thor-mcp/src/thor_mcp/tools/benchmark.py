@@ -114,6 +114,38 @@ async def benchmark_run(args: Dict[str, Any], ctx: Any) -> Dict[str, Any]:
         except Exception as exc:
             raise ToolError(f"write_timeseries unavailable: {exc}") from exc
 
+    # Real (non-simulated) benchmarks run on the remote device worker
+    # when one is configured (THOR_DEVICE_URL); the local cloud node has
+    # no GPU and cannot execute real inference itself.
+    remote = getattr(ctx.config, "remote_device", None)
+    if not simulate and remote is not None and remote.enabled:
+        from thor_mcp.remote import RemoteDeviceError, RemoteDeviceRunner
+
+        try:
+            data = await RemoteDeviceRunner(remote.url, remote.token).run_benchmark(
+                model_id=model_id,
+                workload_type=workload_type,
+                precision=args.get("precision", "fp16"),
+                batch_sizes=args.get("batch_sizes"),
+                iterations=args.get("iterations"),
+                warmup_iterations=args.get("warmup_iterations"),
+                custom_config=custom,
+            )
+        except RemoteDeviceError as exc:
+            raise ToolError(str(exc)) from exc
+        await ctx.store.save_run(data)
+        persisted = await ctx.store.is_persisted()
+
+        results_ = data.get("results", {})
+        ctx.registry.update_best_metrics(model_id, {
+            "latency_p50_ms": results_.get("latency", {}).get("p50_ms"),
+            "throughput_sps": results_.get("throughput", {}).get("samples_per_second"),
+            "power_watts": results_.get("power", {}).get("average_watts"),
+            "memory_peak_mb": results_.get("memory", {}).get("peak_mb"),
+        })
+        return {"status": "success", "run_id": data["run_id"], "persisted": persisted,
+                "device": "remote", **data}
+
     result = await asyncio.to_thread(
         ctx.runner.run,
         model_id=model_id,

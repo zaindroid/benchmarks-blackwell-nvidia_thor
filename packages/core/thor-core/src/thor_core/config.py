@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -96,6 +97,19 @@ class ExperimentsConfig(BaseModel):
     mlflow: MlflowConfig = Field(default_factory=MlflowConfig)
 
 
+class RemoteDeviceConfig(BaseModel):
+    """Configuration for a remote benchmark worker (e.g. a DRIVE Thor
+    device reachable over the network or tailnet).
+
+    When ``enabled``, real (non-simulated) ``benchmark_run`` calls are
+    dispatched to this MCP endpoint instead of running locally.
+    """
+
+    enabled: bool = False
+    url: str = ""      # MCP streamable-HTTP endpoint, e.g. http://100.64.0.10:8000/mcp
+    token: str = ""    # bearer token for the worker endpoint
+
+
 class ThorConfig(BaseModel):
     """Top-level platform configuration (mirrors thor-config.yaml)."""
 
@@ -107,14 +121,23 @@ class ThorConfig(BaseModel):
     benchmarks: BenchmarkConfig = Field(default_factory=BenchmarkConfig)
     models: ModelsConfig = Field(default_factory=ModelsConfig)
     experiments: ExperimentsConfig = Field(default_factory=ExperimentsConfig)
+    remote_device: RemoteDeviceConfig = Field(default_factory=RemoteDeviceConfig)
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> "ThorConfig":
         """Load config from a YAML file (or defaults when path is None)."""
         if path is None:
-            return cls()
-        data: Dict[str, Any] = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-        return cls(**data)
+            cfg = cls()
+        else:
+            data: Dict[str, Any] = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+            cfg = cls(**data)
+        # Environment overrides (deployment platforms provide these).
+        if os.getenv("THOR_DEVICE_URL"):
+            cfg.remote_device.url = os.environ["THOR_DEVICE_URL"]
+            cfg.remote_device.enabled = True
+        if os.getenv("THOR_DEVICE_TOKEN"):
+            cfg.remote_device.token = os.environ["THOR_DEVICE_TOKEN"]
+        return cfg
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(

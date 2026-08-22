@@ -52,3 +52,12 @@ experiments:
   mlflow:
     enabled: false
     tracking_uri: "http://localhost:5000"
+
+# Remote benchmark worker: when enabled, real (non-simulated)
+# benchmark_run calls are dispatched to this MCP endpoint instead of
+# running locally (the cloud node has no GPU). Set THOR_DEVICE_URL /
+# THOR_DEVICE_TOKEN to enable without editing this file.
+remote_device:
+  enabled: false
+  url: ""
+  token: ""

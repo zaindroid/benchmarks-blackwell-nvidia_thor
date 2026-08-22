@@ -127,7 +127,9 @@ def run(
     _print_summary(data)
 
     if output:
-        Path(output).write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
+        out_path = Path(output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
         console.print(f"\n[green]Results written to {output}[/green]")
     if report:
         from thor_benchmark.report.generator import write_report
