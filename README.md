@@ -74,13 +74,17 @@ thor-benchmark hardware
 
 ### Reference measurements (dev workstation)
 
-Measured on an RTX 3050 Ti Laptop (CPU torch inference) — real Thor
-numbers to follow per the [runbook](docs/thor-device-runbook.md):
+Measured on a real NVIDIA Thor device (driver 580, sm_110) — fp16,
+batch 1/4/8, 300 iterations, live NVML telemetry:
 
 | Model | Workload | P50 latency | Throughput | Power (avg) | Notes |
 | --- | --- | --- | --- | --- | --- |
-| YOLOv8n | detection | 71.3 ms | 13.9 samples/s | 7.7 W | real NVML sampling |
-| Tiny MLP → INT8 | quantization | — | — | — | 2.0x weight compression |
+| YOLOv8n | detection | 12.9 ms | ~268 samples/s | 24.8 W | real inference on NVIDIA Thor |
+| YOLOv8n | detection | 71.3 ms | 13.9 samples/s | 7.7 W | dev workstation (CPU torch), reference only |
+
+Additional results are produced on demand: the hosted MCP endpoint
+dispatches real (non-simulated) benchmarks to the connected Thor
+device when `THOR_DEVICE_URL` is configured.
 
 Programmatically:
 
