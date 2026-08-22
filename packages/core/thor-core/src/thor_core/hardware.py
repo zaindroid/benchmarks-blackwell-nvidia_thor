@@ -20,11 +20,15 @@ from thor_core.logging import get_logger
 logger = get_logger(__name__)
 
 try:
-    # pynvml is deprecated in favour of nvidia-ml-py; keep the plan's
-    # dependency name but silence the upstream deprecation warning.
+    # Prefer the maintained nvidia-ml-py binding (works with newer
+    # drivers, e.g. DRIVE Thor driver 580); fall back to the legacy
+    # pynvml package, silencing its deprecation warning.
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="The pynvml package is deprecated")
-        import pynvml
+        try:
+            import nvidia.ml.pynvml as pynvml  # type: ignore[import-not-found]
+        except Exception:
+            import pynvml  # type: ignore[no-redef]
 
     _NVML_AVAILABLE = True
 except Exception:  # pragma: no cover - depends on environment
